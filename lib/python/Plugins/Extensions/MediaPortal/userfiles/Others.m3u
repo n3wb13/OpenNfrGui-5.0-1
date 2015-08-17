@@ -1,0 +1,5 @@
+﻿#EXTM3U,$MODE=IPTV
+#EXTINF:-1,Russia Today HD
+http://rt.ashttp14.visionip.tv/live/rt-global-live-HD/chunklist.m3u8
+#EXTINF:-1,XITE.TV NL
+http://highvolume02.streampartner.nl:1935/vleugels/livestream/playlist.m3u8

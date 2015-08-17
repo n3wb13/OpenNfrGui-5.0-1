@@ -1,0 +1,25 @@
+﻿#EXTM3U,$MODE=IPTV
+#EXTINF:-1,NRW.TV
+http://streaming001.broadcast.tneg.de:1935/nrwtv/_definst_/nrwtv.stream/playlist.m3u8
+#EXTINF:-1,blizz TV HD
+http://lb.hd-livestream.de/live/DasneueTV/playlist.m3u8
+#EXTINF:-1,Family TV HD
+http://83.169.58.38:1935/live/Stream3/playlist.m3u8
+#EXTINF:-1,Alex Berlin
+http://alex-stream.rosebud-media.de:1935/live/alexlivetv.smil/master.m3u8
+#EXTINF:-1,JOIZ HD
+http://ooyalahd2-f.akamaihd.net/i/joizgerm01_delivery@324125/master.m3u8
+#EXTINF:-1,ServusTV HD
+http://player.hdiosstv-f.akamaihd.net/i/servustvhdde_1@75540/master.m3u8
+#EXTINF:-1,DAF
+http://edge-h.daf.tmt.de/ios-live/daf-ios-live-livetv.stream/master.m3u8
+#EXTINF:-1,Welt der Wunder TV
+http://mf.weltderwunder.c.nmdn.net/wdwlive/WDW-HQ.stream/playlist.m3u8
+#EXTINF:-1,Bibel TV
+http://mf.bibeltv.c.nmdn.net/bibeltv_live/BIBEL_TV_HQ-480p.stream/master.m3u8
+#EXTINF:-1,gotv
+http://stream1.gotv.at:1935/live/gotvlive_source/playlist.m3u8
+#EXTINF:-1,DELUXEMUSIC
+http://flash.cdn.deluxemusic.tv/deluxemusic.tv-live/web_850.stream/playlist.m3u8
+#EXTINF:-1,XITE.TV DE
+http://highvolume02.streampartner.nl:1935/vleugels2/livestream/playlist.m3u8

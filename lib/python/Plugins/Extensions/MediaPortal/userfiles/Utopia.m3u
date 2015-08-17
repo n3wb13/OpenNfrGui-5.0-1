@@ -1,0 +1,5 @@
+﻿#EXTM3U,$MODE=IPTV
+#EXTINF:-1,Utopia Livestream (NL)
+utopia-stream-nl.m3u8
+#EXTINF:-1,Utopia Livestream (TR)
+utopia-stream-tr.m3u8

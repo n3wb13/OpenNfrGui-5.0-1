@@ -1,0 +1,6 @@
+<animations>
+	<animation key="mp_player_animation" title="MP Player Animation" duration="1000" internal="">
+		<position val="2.0" animateY="" interpolate="decelerate"/>
+		<position_hide val="2.0" animateY="" interpolate="accelerate"/>
+	</animation>
+</animations>
