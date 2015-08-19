@@ -77,7 +77,7 @@ class AVSwitch:
 	# if modes.has_key("DVI-PC") and not getModeList("DVI-PC"):
 	# 	print "remove DVI-PC because of not existing modes"
 	# 	del modes["DVI-PC"]
-	if modes.has_key("YPbPr") and getBoxType() in ('bre2ze', 'vusolose', 'et4x00', 'xp1000', 'tm2t', 'tmsingle', 'vusolo2', 'tmnano','iqonios300hd', 'odinm7', 'e3hd', 'dm500hdv2', 'dm500hd', 'dm800', 'ebox7358', 'eboxlumi', 'ebox5100','ixusszero', 'optimussos1', 'enfinity', 'uniboxhd1'):
+	if modes.has_key("YPbPr") and getBoxType() in ('xpeedlxcs2', 'xpeedlxcc', 'bre2ze', 'vusolose', 'et4x00', 'xp1000', 'tm2t', 'tmsingle', 'vusolo2', 'vusolose', 'tmnano','iqonios300hd', 'odinm7', 'e3hd', 'dm500hdv2', 'dm500hd', 'dm800', 'ebox7358', 'eboxlumi', 'ebox5100','ixusszero', 'optimussos1', 'enfinity', 'uniboxhd1'):
 		del modes["YPbPr"]
 	def __init__(self):
 		self.last_modes_preferred =  [ ]
@@ -462,7 +462,7 @@ def InitAVSwitch():
 	config.av.colorformat.addNotifier(setColorFormat)
 	
 	iAVSwitch.setInput("ENCODER") # init on startup
-	if (getBoxType() in ('gbquad', 'gbquadplus', 'et5x00', 'ixussone', 'ixusszero', 'e3hd', 'odinm6', 'omtimussos1', 'omtimussos2', 'gb800seplus', 'gb800ueplus' )) or about.getModelString() == 'et6000':
+	if (getBoxType() in ('twinboxlcd', 'gbquad', 'gbquadplus', 'et5x00', 'ixussone', 'ixusszero', 'e3hd', 'odinm6', 'omtimussos1', 'omtimussos2', 'gb800seplus', 'gb800ueplus' )) or about.getModelString() == 'et6000':
 		detected = False
 	else:
 		detected = eAVSwitch.getInstance().haveScartSwitch()
