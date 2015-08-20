@@ -37,8 +37,8 @@ class SpinnerSelectionBox(Screen):
 		self.Bilder = []
 		if cursel:
 			for i in range(64):
-				if (os.path.isfile("/usr/share/enigma2/Spinner/%s/wait%d.png"%(cursel[0],i+1))):
-					self.Bilder.append("/usr/share/enigma2/Spinner/%s/wait%d.png"%(cursel[0],i+1))
+				if (os.path.isfile("/usr/share/enigma2/SpinnerSelector/%s/wait%d.png"%(cursel[0],i+1))):
+					self.Bilder.append("/usr/share/enigma2/SpinnerSelector/%s/wait%d.png"%(cursel[0],i+1))
 		self["bild"] = Spinner(self.Bilder);
 		self["list"] = MenuList(list = self.list) #, selection = selection)
 		self["list"].onSelectionChanged.append(self.Changed)
@@ -59,8 +59,8 @@ class SpinnerSelectionBox(Screen):
 		if cursel:
 			self.Bilder = []
 			for i in range(64):
-				if (os.path.isfile("/usr/share/enigma2/Spinner/%s/wait%d.png"%(cursel[0],i+1))):
-					self.Bilder.append("/usr/share/enigma2/Spinner/%s/wait%d.png"%(cursel[0],i+1))
+				if (os.path.isfile("/usr/share/enigma2/SpinnerSelector/%s/wait%d.png"%(cursel[0],i+1))):
+					self.Bilder.append("/usr/share/enigma2/SpinnerSelector/%s/wait%d.png"%(cursel[0],i+1))
 			self["bild"].SetBilder(self.Bilder)
 			
 		

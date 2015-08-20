@@ -435,8 +435,7 @@ data/display128/Makefile
 data/display220/Makefile
 data/display400/Makefile
 data/spinner/Makefile
-data/Spinner/Makefile
-data/Spinner/default/Makefile
+data/SpinnerSelector/Makefile
 data/vfd128/Makefile
 data/vfd140/Makefile
 data/vfd255/Makefile

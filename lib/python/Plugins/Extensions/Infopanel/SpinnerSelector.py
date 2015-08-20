@@ -9,7 +9,7 @@ import os
 class SpinnerSelector:
 	def __init__(self,session):
 		self.session = session
-		path = "/usr/share/enigma2/Spinner/"
+		path = "/usr/share/enigma2/SpinnerSelector/"
 		dirs = os.listdir(path)
 		dirs.sort()
 		menu = []
@@ -25,8 +25,8 @@ class SpinnerSelector:
 		for i in range(64):
 			if (os.path.isfile("/usr/share/enigma2/spinner/wait%d.png"%(i+1))):
 				os.system("rm -f /usr/share/enigma2/spinner/wait%d.png"%(i+1))
-			if (os.path.isfile("/usr/share/enigma2/Spinner/%s/wait%d.png"%(choice,i+1))):
-				os.system("ln -s /usr/share/enigma2/Spinner/%s/wait%d.png /usr/share/enigma2/spinner/wait%d.png"%(choice,i+1,i+1))
+			if (os.path.isfile("/usr/share/enigma2/SpinnerSelector/%s/wait%d.png"%(choice,i+1))):
+				os.system("ln -s /usr/share/enigma2/SpinnerSelector/%s/wait%d.png /usr/share/enigma2/spinner/wait%d.png"%(choice,i+1,i+1))
 		self.session.openWithCallback(self.restart,MessageBox,_("GUI needs a restart to apply a new spinner.\nDo you want to restart the GUI now ?"), MessageBox.TYPE_YESNO)
 
 	def restart(self, answer):
