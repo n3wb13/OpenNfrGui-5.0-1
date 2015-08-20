@@ -436,6 +436,7 @@ data/display220/Makefile
 data/display400/Makefile
 data/spinner/Makefile
 data/SpinnerSelector/Makefile
+data/SpinnerSelector/Obelix/Makefile
 data/vfd128/Makefile
 data/vfd140/Makefile
 data/vfd255/Makefile
