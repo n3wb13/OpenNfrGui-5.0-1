@@ -7,7 +7,7 @@ from Components.Label import Label
 from Components.ConfigList import ConfigListScreen, ConfigList
 from Components.config import ConfigSubsection, ConfigYesNo, config, ConfigSelection, ConfigText, ConfigNumber, ConfigSet, ConfigLocations, NoSave, ConfigClock, ConfigInteger, ConfigBoolean, ConfigPassword, ConfigIP, ConfigSlider, ConfigSelectionNumber, getConfigListEntry, KEY_LEFT, KEY_RIGHT, configfile
 from Components.Sources.StaticText import StaticText
-from Plugins.Extensions.Infopanel.outofflash1 import MoveVideos_int, MoveVideos
+from Plugins.Extensions.Infopanel.outofflash import MoveVideos_int, MoveVideos
 from Components.MenuList import MenuList
 from enigma import *
 from Tools.LoadPixmap import LoadPixmap
@@ -90,7 +90,7 @@ class BootvideoSetupScreen(Screen):
                        	elif xvideo.endswith(".mpeg"):
                        	       	bootvideo.append(xvideo)  
 		self.list = []
-		self["actions"] = ActionMap(["OkCancelActions", "DirectionActions", "ColorActions", "MenuActions"],
+		self["actions"] = ActionMap(["OkCancelActions", "DirectionActions", "ColorActions", "MenuActions", "EPGSelectActions"],
 			{
 				"cancel": self.Exit,
 				"exit": self.Exit,
@@ -99,6 +99,7 @@ class BootvideoSetupScreen(Screen):
 				"green": self.ok,
 				"blue": self.KeyBlue,
 				"yellow": self.KeyYellow,
+				"info": self.KeyInfo,
                                 				
 			}, 1)
 			
@@ -113,8 +114,14 @@ class BootvideoSetupScreen(Screen):
 		else:
 		        self["Mlist"] = PanelList([])
 		self["Mlist"].l.setList(self.Mlist)
-		self["Mlist"].onSelectionChanged.append(self.selectionChanged) 		
-
+		self["Mlist"].onSelectionChanged.append(self.selectionChanged) 	
+		
+	def KeyInfo(self):
+	        self.session.nav.stopService()
+	        menu = self['Mlist'].getCurrent()[2]
+		menu1 = list(menu)[7]
+		os.system('gst-launch-1.0 playbin uri=file:///usr/share/enigma2/bootvideos/%s' % menu1)
+                self.session.nav.playService(self.oldbmcService)
 
 	def KeyYellow(self):
 		self.session.open(MoveVideos)
