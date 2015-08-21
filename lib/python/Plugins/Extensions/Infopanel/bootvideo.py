@@ -54,9 +54,9 @@ def InfoEntryComponent(file):
                         	   
            
 class BootvideoSetupScreen(Screen):
-	skin = """<screen name="BootvideoSetupScreen" position="center,center" size="950,470" title="BootvideoSetupScreen">
+	skin = """<screen name="BootvideoSetupScreen" position="center,center" size="950,520" title="BootvideoSetupScreen">
 				<ePixmap pixmap="/usr/lib/enigma2/python/Plugins/Extensions/Infopanel/pics/redlogo.png" position="0,380" size="950,84" alphatest="on" zPosition="1" />
-				<ePixmap pixmap="/usr/lib/enigma2/python/Plugins/Extensions/Infopanel/pics/alliance.png" position="670,255" size="100,67" alphatest="on" zPosition="1" />
+                                <ePixmap pixmap="/usr/lib/enigma2/python/Plugins/Extensions/Infopanel/pics/alliance.png" position="670,255" size="100,67" alphatest="on" zPosition="1" />
 				<ePixmap pixmap="/usr/lib/enigma2/python/Plugins/Extensions/Infopanel/pics/opennfr_info.png" position="510,11" size="550,354" alphatest="on" zPosition="1" />
 				<widget source="global.CurrentTime" render="Label" position="450, 340" size="500,24" font="Regular;20" foregroundColor="white" halign="right" transparent="1" zPosition="5">
 				<convert type="ClockToText">&gt;Format%H:%M:%S</convert>
@@ -64,6 +64,17 @@ class BootvideoSetupScreen(Screen):
 				<eLabel backgroundColor="un56c856" position="0,330" size="950,1" zPosition="0" />
 				<widget name="Mlist" position="10,10" size="480,300" zPosition="1" scrollbarMode="showOnDemand" backgroundColor="un251e1f20" transparent="1" />
 				<widget name="label1" position="10,340" size="490,25" font="Regular;20" transparent="1" foregroundColor="#f2e000" halign="left" />
+				<ePixmap pixmap="skin_default/buttons/red.png" position="10,480" size="30,30" alphatest="blend" />
+				<ePixmap pixmap="skin_default/buttons/green.png" position="190,480" size="30,30" alphatest="blend" />
+				<ePixmap pixmap="skin_default/buttons/yellow.png" position="370,480" size="30,30" alphatest="blend" />
+				<ePixmap pixmap="skin_default/buttons/blue.png" position="550,480" size="30,30" alphatest="blend" />
+				<ePixmap pixmap="skin_default/buttons/key_info.png" position="735,480" size="30,30" alphatest="blend" />
+				<widget source="key_red" render="Label" position="45,482" size="140,24" zPosition="1" font="Regular;20" halign="left" backgroundColor="black" transparent="1" />
+				<widget source="key_green" render="Label" position="225,483" size="140,24" zPosition="1" font="Regular;20" halign="left" backgroundColor="black" transparent="1" />
+				<widget source="key_yellow" render="Label" position="405,483" size="140,24" zPosition="1" font="Regular;20" halign="left" backgroundColor="black" transparent="1" />
+				<widget source="key_blue" render="Label" position="590,483" size="140,24" zPosition="1" font="Regular;20" halign="left" backgroundColor="black" transparent="1" />
+				<widget source="key_info" render="Label" position="775,483" size="140,24" zPosition="1" font="Regular;20" halign="left" backgroundColor="black" transparent="1" />
+				<widget source="session.VideoPicture" render="Pig" position="510,11" size="420,236" backgroundColor="transparent" zPosition="2" />
                 </screen>"""	
 	def __init__(self, session):
 		Screen.__init__(self, session)
@@ -72,23 +83,28 @@ class BootvideoSetupScreen(Screen):
                 self.Console = Console()
 		self.onShown.append(self.setWindowTitle)
 		aktbootvideo = config.bootvideo.booting.value
+		self.oldbmcService = self.session.nav.getCurrentlyPlayingServiceReference()
 		self["label1"] = Label(_("now Using Bootvideo: %s") % aktbootvideo)
 		self["key_red"] = StaticText(_("Exit"))
                 self["key_green"] = StaticText(_("Save"))
-		self["key_blue"] = StaticText(_("MoveVideos_int"))
-                self["key_yellow"] = StaticText(_("MoveVideos_ext"))
+		self["key_blue"] = StaticText(_("MoveToExt."))
+                self["key_yellow"] = StaticText(_("MoveBack"))
+                self["key_info"] = StaticText(_("preview"))
 
 	        vpath = "/usr/share/enigma2/bootvideos/"	
-		uvideo=[]
-		uvideo = os.listdir(vpath)
-		bootvideo = []
-                for xvideo in uvideo:
-                       	if xvideo.endswith(".mp4"):
-                       	       	bootvideo.append(xvideo)
-                       	elif xvideo.endswith(".mkv"):
-                       	       	bootvideo.append(xvideo)
-                       	elif xvideo.endswith(".mpeg"):
-                       	       	bootvideo.append(xvideo)  
+                if not os.path.exists(vpath):
+                       	bootvideo = []
+                else:
+		       	uvideo=[]
+		       	uvideo = os.listdir(vpath)
+		       	bootvideo = []
+                       	for xvideo in uvideo:
+                       	       	if xvideo.endswith(".mp4"):
+                       	       	       	bootvideo.append(xvideo)
+                       	       	elif xvideo.endswith(".mkv"):
+                       	       	       	bootvideo.append(xvideo)
+                       	       	elif xvideo.endswith(".mpeg"):
+                       	       	       	bootvideo.append(xvideo)   
 		self.list = []
 		self["actions"] = ActionMap(["OkCancelActions", "DirectionActions", "ColorActions", "MenuActions", "EPGSelectActions"],
 			{
