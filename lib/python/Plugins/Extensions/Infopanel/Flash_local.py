@@ -518,10 +518,10 @@ class doFlashImage(Screen):
 		box = self.box()
 		self.imagelist = []
 		if self.Online:
-			self["key_yellow"].setText("Backup Settings")
+			self["key_yellow"].setText("")
 			if image == 0:
 				self.feedurl = feedurl_nfr
-				#self["key_blue"].setText("Teamimages")
+				self["key_blue"].setText("Teamimages")
 			url = '%s/%s' % (self.feedurl,box)
 			req = urllib2.Request(url)
 			try:
