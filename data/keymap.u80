@@ -662,7 +662,6 @@
 
 		<key id="KEY_ENTER" mapto="ok" flags="m" />
 		<key id="KEY_ESC" mapto="cancel" flags="m" />
-		<key id="KEY_BLUE" mapto="openCover" flags="b" />			
 	</map>
 
 	<map context="DirectionActions">
