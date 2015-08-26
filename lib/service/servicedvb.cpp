@@ -2771,7 +2771,7 @@ void eDVBServicePlay::updateDecoder(bool sendSeekableStateChanged)
 		eDebug("getting program info failed.");
 	else
 	{
-		eDebugNoNewLineStart("have %zd video stream(s)", program.videoStreams.size());
+		eDebugNoNewLine("have %zd video stream(s)", program.videoStreams.size());
 		if (!program.videoStreams.empty())
 		{
 			eDebugNoNewLine(" (");
@@ -2806,7 +2806,7 @@ void eDVBServicePlay::updateDecoder(bool sendSeekableStateChanged)
 		}
 		eDebugNoNewLine(", and the pcr pid is %04x", program.pcrPid);
 		pcrpid = program.pcrPid;
-		eDebugNoNewLineEnd(", and the text pid is %04x", program.textPid);
+		eDebug(", and the text pid is %04x", program.textPid);
 		tpid = program.textPid;
 	}
 
