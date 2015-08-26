@@ -1704,6 +1704,8 @@ class MovieSelection(Screen, HelpableScreen, SelectionEventInfo, InfoBarBase, Pr
 			# cancelled by user (passing any arg means it's a dialog return)
 			return
 		item = self.getCurrentSelection()
+		if not item:
+		        return		
 		current = item[0]
 		info = item[1]
 		cur_path = os.path.realpath(current.getPath())
