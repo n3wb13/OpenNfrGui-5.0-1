@@ -549,6 +549,7 @@ class MovieSelection(Screen, HelpableScreen, SelectionEventInfo, InfoBarBase, Pr
 				"green": (self.btn_green, _("Move to other directory")),
 				"yellow": (self.btn_yellow, _("Select the movie path")),
 				"blue": (self.btn_blue, _("Show tag menu")),
+				"bluelong": (self.openCover, _("search Cover")),
 			})
 		self["OkCancelActions"] = HelpableActionMap(self, "OkCancelActions",
 			{
@@ -592,6 +593,11 @@ class MovieSelection(Screen, HelpableScreen, SelectionEventInfo, InfoBarBase, Pr
 			self.onExecBegin.append(self.asciiOff)
 		else:
 			self.onExecBegin.append(self.asciiOn)
+
+	def openCover(self, session, service, **kwargs):
+		from Components.SearchCovers import CoverFindScreen
+		session.openWithCallback(CoverFindScreen, service, session.current_dialog, **kwargs)
+
 
 	def isProtected(self):
 		return config.ParentalControl.setuppinactive.value and config.ParentalControl.config_sections.movie_list.value
@@ -1698,8 +1704,6 @@ class MovieSelection(Screen, HelpableScreen, SelectionEventInfo, InfoBarBase, Pr
 			# cancelled by user (passing any arg means it's a dialog return)
 			return
 		item = self.getCurrentSelection()
-		if not item:
-		        return		
 		current = item[0]
 		info = item[1]
 		cur_path = os.path.realpath(current.getPath())
