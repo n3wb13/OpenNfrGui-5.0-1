@@ -340,6 +340,7 @@ class MovieContextMenu(Screen, ProtectedScreen):
 				menu.append((_("Reset playback position"), csel.do_reset))
 				menu.append((_("Rename"), csel.do_rename))
 				menu.append((_("Start offline decode"), csel.do_decode))
+				menu.append((_("Search for Covers"), csel.do_covers))				
 				# Plugins expect a valid selection, so only include them if we selected a non-dir
 				menu.extend([(p.description, boundFunction(p, session, service)) for p in plugins.getPlugins(PluginDescriptor.WHERE_MOVIELIST)])
 				
@@ -549,7 +550,6 @@ class MovieSelection(Screen, HelpableScreen, SelectionEventInfo, InfoBarBase, Pr
 				"green": (self.btn_green, _("Move to other directory")),
 				"yellow": (self.btn_yellow, _("Select the movie path")),
 				"blue": (self.btn_blue, _("Show tag menu")),
-				"bluelong": (self.openCover, _("search Cover")),
 			})
 		self["OkCancelActions"] = HelpableActionMap(self, "OkCancelActions",
 			{
@@ -593,11 +593,6 @@ class MovieSelection(Screen, HelpableScreen, SelectionEventInfo, InfoBarBase, Pr
 			self.onExecBegin.append(self.asciiOff)
 		else:
 			self.onExecBegin.append(self.asciiOn)
-
-	def openCover(self, session, service, **kwargs):
-		from Components.SearchCovers import CoverFindScreen
-		session.openWithCallback(CoverFindScreen, service, session.current_dialog, **kwargs)
-
 
 	def isProtected(self):
 		return config.ParentalControl.setuppinactive.value and config.ParentalControl.config_sections.movie_list.value
@@ -1476,6 +1471,11 @@ class MovieSelection(Screen, HelpableScreen, SelectionEventInfo, InfoBarBase, Pr
 		self.session.openWithCallback(self.createDirCallback, VirtualKeyBoard,
 			title = _("Please enter name of the new directory"),
 			text = "")
+			
+	def do_covers(self):			
+		from Components.SearchCovers import CoverFindScreen
+		session.openWithCallback(CoverFindScreen, service, session.current_dialog, **kwargs)
+		
 	def createDirCallback(self, name):
 		if not name:
 			return
