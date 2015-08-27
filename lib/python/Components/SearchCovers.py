@@ -46,9 +46,9 @@ from twisted.web import client, error as weberror
 from twisted.internet import reactor
 from twisted.internet import defer
 from urllib import urlencode
-from __init__ import _
+#from __init__ import _
 
-pname = _("CoverFind")
+pname = _("Find Covers")
 pdesc = _("Find covers ... function for Movielist")
 pversion = "0.5-r0"
 pdate = "20140425"
