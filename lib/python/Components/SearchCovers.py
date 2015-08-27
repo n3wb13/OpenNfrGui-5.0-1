@@ -131,7 +131,7 @@ class PicLoader:
 		
 class CoverFindScreen(Screen):
 	skin = """
-		<screen position="40,80" size="1200,600" title=" ">
+		<screen name="CoverFindScreen" position="40,80" size="1200,600" title=" ">
 				<widget name="searchinfo" position="10,10" size="1180,30" font="Regular;24" foregroundColor="unfff000" />
 				<widget name="list" position="10,60" size="1180,500" scrollbarMode="showOnDemand" />
 				<widget name="key_red" position="53,568" size="260,25" transparent="1" font="Regular;20" />
@@ -427,17 +427,17 @@ class createCoverList(GUIComponent, object):
 
 class CoverFindFile(Screen):
 	skin = """
-		<screen position="40,80" size="1200,600" title=" " >
-			<widget name="media" position="10,10" size="1180,30" font="Regular;24" foregroundColor="#00fff000"/>
-			<widget name="filelist" position="10,60" size="800,480" scrollbarMode="showOnDemand"/>
-			<widget name="picture" position="850,90" size="300,420" alphatest="blend"/>
-			<widget name="key_red" position="100,570" size="260,25" transparent="1" font="Regular;20"/>
-			<widget name="key_green" position="395,570" size="260,25"  transparent="1" font="Regular;20"/>
-			<widget name="key_yellow" position="690,570" size="260,25" transparent="1" font="Regular;20"/>
-			<ePixmap position="70,570" size="260,25" zPosition="0" pixmap="/usr/lib/enigma2/python/Plugins/Extensions/CoverFind/pic/button_red.png" transparent="1" alphatest="on"/>
-			<ePixmap position="365,570" size="260,25" zPosition="0" pixmap="/usr/lib/enigma2/python/Plugins/Extensions/CoverFind/pic/button_green.png" transparent="1" alphatest="on"/>
-			<ePixmap position="660,570" size="260,25" zPosition="0" pixmap="/usr/lib/enigma2/python/Plugins/Extensions/CoverFind/pic/button_yellow.png" transparent="1" alphatest="on"/>
-		</screen>"""
+		<screen name="CoverFindFile" position="40,80" size="1200,600" title=" ">
+			<widget name="media" position="10,10" size="1180,30" font="Regular;24" foregroundColor="unfff000" />
+			<widget name="filelist" position="10,60" size="800,480" scrollbarMode="showOnDemand" />
+			<widget name="picture" position="850,90" size="300,420" alphatest="blend" />
+			<widget name="key_red" position="53,568" size="260,25" transparent="1" font="Regular;20" />
+			<widget name="key_green" position="370,568" size="260,25" transparent="1" font="Regular;20" />
+			<widget name="key_yellow" position="681,568" size="260,25" transparent="1" font="Regular;20" />
+			<ePixmap pixmap="skin_default/buttons/red.png" position="17,566" size="30,30" alphatest="blend" />
+			<ePixmap pixmap="skin_default/buttons/green.png" position="335,566" size="30,30" alphatest="blend" />
+			<ePixmap pixmap="skin_default/buttons/yellow.png" position="647,566" size="30,30" alphatest="blend" />
+			</screen>"""
 
 	def __init__(self, session, initDir, plugin_path = None):
 		Screen.__init__(self, session)
