@@ -1472,9 +1472,20 @@ class MovieSelection(Screen, HelpableScreen, SelectionEventInfo, InfoBarBase, Pr
 			title = _("Please enter name of the new directory"),
 			text = "")
 			
-	def do_covers(self):			
-		from Components.SearchCovers import CoverFindScreen
-		session.openWithCallback(CoverFindScreen, service, session.current_dialog, **kwargs)
+	def do_covers(self):
+	        #**kwargs = 0
+        	item = self.getCurrentSelection()
+        	current = item[0]
+        	info = item[1]
+        	if info is None:
+        		# Special case
+        		return
+                else:
+                	service = info and info.getName(current)
+                        print "service:", service	
+			from Components.SearchCovers import *
+			self.session.openWithCallback(self.reloadList, FindMovieList, service)
+
 		
 	def createDirCallback(self, name):
 		if not name:
