@@ -1,18 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-#######################################################################
-# maintainer: <schomi@vuplus-support.org> 
-# THX @einfall for search part of code
 
-#This plugin is free software, you are allowed to
-#modify it (if you keep the license),
-#but you are not allowed to distribute/publish
-#it without source code (this version and your modifications).
-#This means you also have to distribute
-#source code of your modifications.
-
-#######################################################################
 from Plugins.Plugin import PluginDescriptor
+
 from Components.ActionMap import *
 from Components.Label import Label
 from Components.Sources.StaticText import StaticText
@@ -20,365 +10,409 @@ from Components.MultiContent import MultiContentEntryText, MultiContentEntryPixm
 from Components.Pixmap import Pixmap
 from Components.AVSwitch import AVSwitch
 from Components.PluginComponent import plugins
-# from Components.FileList import FileList
-from re import compile as re_compile
-from os import path as os_path, listdir
-from Components.MenuList import MenuList
-from Components.Harddisk import harddiskmanager
-from Tools.Directories import SCOPE_CURRENT_SKIN, resolveFilename, fileExists
-from enigma import RT_HALIGN_LEFT, eListboxPythonMultiContent, eServiceReference, eServiceCenter, gFont
-from Tools.LoadPixmap import LoadPixmap
-#
-from Screens.Screen import Screen
-from Screens.VirtualKeyBoard import VirtualKeyBoard
+from Components.config import *
+from Components.ConfigList import ConfigList, ConfigListScreen
 from Components.GUIComponent import GUIComponent
 from Components.Sources.List import List
+from Components.MenuList import MenuList
+from Components.FileList import FileList, FileEntryComponent
+
+from Tools.Directories import SCOPE_CURRENT_SKIN, resolveFilename, fileExists
 from Tools.LoadPixmap import LoadPixmap
 from Tools.BoundFunction import boundFunction
 from Tools.Directories import pathExists, fileExists, SCOPE_SKIN_IMAGE, resolveFilename
-from Screens.Screen import Screen
+
+from enigma import RT_HALIGN_LEFT, eListboxPythonMultiContent, eServiceReference, eServiceCenter, gFont
 from enigma import eListboxPythonMultiContent, eListbox, gFont, RT_HALIGN_LEFT, RT_HALIGN_RIGHT, RT_HALIGN_CENTER, loadPNG, RT_WRAP, eConsoleAppContainer, eServiceCenter, eServiceReference, getDesktop, loadPic, loadJPG, RT_VALIGN_CENTER, gPixmapPtr, ePicLoad, eTimer
-import sys, os, re, shutil
-from os import path, remove
+
+from Screens.Screen import Screen
+from Screens.MessageBox import MessageBox
+from Screens.VirtualKeyBoard import VirtualKeyBoard
+
 from twisted.web.client import getPage
 from twisted.web.client import downloadPage
 from twisted.web import client, error as weberror
 from twisted.internet import reactor
 from twisted.internet import defer
 from urllib import urlencode
-#from __init__ import _
+import sys, os, re, shutil, time
+from threading import Thread
+from os import listdir as os_listdir, path as os_path
+from re import compile
 
-pname = _("Find Covers")
-pdesc = _("Find covers ... function for Movielist")
-pversion = "0.5-r0"
-pdate = "20140425"
+try:
+	from enigma import eMediaDatabase
+	isDreamOS = True
+except:
+	try:
+		file = open("/proc/stb/info/model", "r")
+		dev = file.readline().strip()
+		file.close()
+		if dev == "dm7080":
+			isDreamOS = True
+		elif dev == "dm820":
+			isDreamOS = True
+		else:
+			isDreamOS = False
+	except:
+			isDreamOS = False
 
-def main(session, service, **kwargs):
-	session.open(CoverFindScreen, service, session.current_dialog, **kwargs)
+def getCoverPath():
+	blockList = ['hdd','cf','usb','sdcard']
+	dirList = os_listdir("/media")
+	coverPaths = ['/usr/share/enigma2/cover/', '/data/cover/', '/media/cf/cover/', '/media/usb/cover/', '/media/sdcard/cover/']
 
-def Plugins(**kwargs):
-	return PluginDescriptor(name=_("CoverFind"), description=_("Find Covers ..."), where = PluginDescriptor.WHERE_MOVIELIST, fnc=main)
+	if fileExists("/proc/mounts"):
+		mountsFile = open("/proc/mounts" ,"r")
+		for line in mountsFile:
+			entry = line.split()
+			if entry[2] in ["nfs", "nfs4", "smbfs", "cifs"]:
+				if entry[1].startswith("/media/"):
+					blockList.append(entry[1][7:])
+		mountsFile.close()
 
-def decodeHtml(text):
-	text = text.replace('&auml;','ä')
-	text = text.replace('\u00e4','ä')
-	text = text.replace('&#228;','ä')
+	for dir in dirList:
+		if dir in blockList:
+			print dir, blockList
+			continue
+		if os_path.ismount("/media/%s" %(dir)) or (os_path.islink("/media/%s" %(dir)) and os_path.ismount(os_path.realpath("/media/%s" %(dir)))):
+			path = "/media/%s/cover/" % (dir)
+			coverPaths.append(path)
+	return coverPaths
 
-	text = text.replace('&Auml;','Ä')
-	text = text.replace('\u00c4','Ä')
-	text = text.replace('&#196;','Ä')
+pname = "Find MovieList Covers"
+pversion = "0.5 OpenNfr-mod"
 
-	text = text.replace('&ouml;','ö')
-	text = text.replace('\u00f6','ö')
-	text = text.replace('&#246;','ö')
+config.plugins.fmlc = ConfigSubsection()
+config.plugins.fmlc.themoviedb_coversize = ConfigSelection(default="w185", choices = ["w92", "w185", "w500", "original"])
+config.plugins.fmlc.followsymlink = ConfigYesNo(default = False)
+config.plugins.fmlc.getdescription = ConfigYesNo(default = False)
+config.plugins.fmlc.bgtimer = ConfigYesNo(default = False)
+config.plugins.fmlc.bgtime = ConfigInteger(3, (1,24))
+config.plugins.fmlc.savestyle = ConfigSelection(default="movielist", choices = ["movielist", "opennfr"])
+config.plugins.fmlc.coverpath = ConfigSelection(default = "/usr/share/enigma2/cover/", choices = getCoverPath())
+config.plugins.fmlc.scanpath = ConfigText(default = "/media/hdd/movie/", fixed_size = False)
 
-	text = text.replace('\xc3\xb6','ö')
-	text = text.replace('\xc3\x96','Ö')
-	text = text.replace('\xc3\xbc','ü')
-	text = text.replace('\xc3\x9c','Ü')
-	text = text.replace('\xc3\xab','ä')
-	text = text.replace('\xc3\x84','Ä')
-
-	text = text.replace('&ouml;','Ö')
-	text = text.replace('&Ouml;','Ö')
-	text = text.replace('\u00d6','Ö')
-	text = text.replace('&#214;','Ö')
-
-	text = text.replace('&uuml;','ü')
-	text = text.replace('\u00fc','ü')
-	text = text.replace('&#252;','ü')
-
-	text = text.replace('&Uuml;','Ü')
-	text = text.replace('\u00dc','Ü')
-	text = text.replace('&#220;','Ü')
-
-	text = text.replace('&szlig;','ss')
-	text = text.replace('\u00df','ss')
-	text = text.replace('&#223;','ss')
-
-	return text
+fileExtensionsRemove = "(.avi|.mkv|.divx|.f4v|.flv|.img|.iso|.m2ts|.m4v|.mov|.mp4|.mpeg|.mpg|.mts|.vob|.wmv)"
 
 def cleanFile(text):
 	cutlist = ['x264','720p','1080p','1080i','PAL','GERMAN','ENGLiSH','WS','DVDRiP','UNRATED','RETAIL','Web-DL','DL','LD','MiC','MD','DVDR','BDRiP','BLURAY','DTS','UNCUT','ANiME',
 				'AC3MD','AC3','AC3D','TS','DVDSCR','COMPLETE','INTERNAL','DTSD','XViD','DIVX','DUBBED','LINE.DUBBED','DD51','DVDR9','DVDR5','h264','AVC',
 				'WEBHDTVRiP','WEBHDRiP','WEBRiP','WEBHDTV','WebHD','HDTVRiP','HDRiP','HDTV','ITUNESHD','REPACK','SYNC']
-	text = text.replace('.flv','').replace('.ts','').replace('.m2ts','').replace('.mkv','').replace('.avi','').replace('.mpeg','').replace('.mpg','').replace('.iso','').replace('.mp4','')
-	
+	#text = text.replace('.wmv','').replace('.flv','').replace('.ts','').replace('.m2ts','').replace('.mkv','').replace('.avi','').replace('.mpeg','').replace('.mpg','').replace('.iso','').replace('.mp4','').replace('.jpg','').replace('.txt','')
+	text = re.sub(fileExtensionsRemove + "$", '', text)
 	for word in cutlist:
-		text = re.sub('(\_|\-|\.|\+)'+word+'(\_|\-|\.|\+)','+', text, flags=re.I)
+		text = re.sub('(\_|\-|\.|\+|\s)'+word+'(\_|\-|\.|\+|\s)','+', text, flags=re.I)
 	text = text.replace('.',' ').replace('-',' ').replace('_',' ').replace('+','')
-
 	return text
-	
-def cleanEnd(text):
-	text = text.replace('.flv','').replace('.ts','').replace('.m2ts','').replace('.mkv','').replace('.avi','').replace('.mpeg','').replace('.mpg','').replace('.iso','').replace('.mp4','')
-	return text
-	
-class PicLoader:
-    def __init__(self, width, height, sc=None):
-        self.picload = ePicLoad()
-        if(not sc):
-            sc = AVSwitch().getFramebufferScale()
-        self.picload.setPara((width, height, sc[0], sc[1], False, 1, "#ff000000"))
 
-    def load(self, filename):
-        self.picload.startDecode(filename, 0, 0, False)
-        data = self.picload.getData()
-        return data
-    
-    def destroy(self):
-        del self.picload
-		
-class CoverFindScreen(Screen):
-	skin = """
-		<screen name="CoverFindScreen" position="40,80" size="1200,600" title=" ">
-				<widget name="searchinfo" position="10,10" size="1180,30" font="Regular;24" foregroundColor="unfff000" />
-				<widget name="list" position="10,60" size="1180,500" scrollbarMode="showOnDemand" />
-				<widget name="key_red" position="53,568" size="260,25" transparent="1" font="Regular;20" />
-				<widget name="key_green" position="370,568" size="260,25" transparent="1" font="Regular;20" />
-				<widget name="key_yellow" position="681,568" size="260,25" transparent="1" font="Regular;20" />
-				<widget name="key_blue" position="979,568" size="260,25" transparent="1" font="Regular;20" />
-				<ePixmap pixmap="skin_default/buttons/red.png" position="17,566" size="30,30" alphatest="blend" />
-				<ePixmap pixmap="skin_default/buttons/green.png" position="335,566" size="30,30" alphatest="blend" />
-				<ePixmap pixmap="skin_default/buttons/yellow.png" position="647,566" size="30,30" alphatest="blend" />
-				<ePixmap pixmap="skin_default/buttons/blue.png" position="946,566" size="30,30" alphatest="blend" />
-				</screen>"""	
+class BackgroundCoverScanner(Thread):
 
-	def __init__(self, session, service, parent, args = 0):
-		Screen.__init__(self, session, parent = parent)
+	def __init__(self, session):
+		assert not BackgroundCoverScanner.instance, "only one MovieDataUpdater instance is allowed!"
+		BackgroundCoverScanner.instance = self # set instance
 		self.session = session
+		self.scanning = False
+		self.bgTimerRunning = False
+		self.fileExtensions = [".avi",".mkv",".divx",".f4v",".flv",".img",".iso",".m2ts",".m4v",".mov",".mp4",".mpeg",".mpg",".mts",".vob",".wmv"]
+		Thread.__init__(self)
 
-		self.isDirectory = False
-		serviceHandler = eServiceCenter.getInstance()
-		info = serviceHandler.info(service)
-		path = service.getPath()
-#		if path.endswith(".ts") is True:
-#			path = path[:-3]
-		self.savePath = path
-		self.dir = '/'.join(path.split('/')[:-1]) + '/'
-		self.file = self.baseName(path)
-		if path.endswith("/") is True:
-			path = path[:-1]
-			self.file = self.baseName(path)
-			self.text = self.baseName(path)
-			self.isDirectory = True
-		else:
-			self.text = cleanFile(info.getName(service))
-			self.isDirectory = False
-		print "[CoverFind] " + str(self.isDirectory)
-		print "[CoverFind] " + path
-		print "[CoverFind] " + str(self.dir)
-		print "[CoverFind] " + str(self.file)	
-		print "[CoverFind] " + str(self.text)
-
-
-		self["actions"]  = ActionMap(["OkCancelActions", "ColorActions"], 
-		{
-			"red": self.cancel,
-			"green": self.fileSearch,
-			"yellow": self.searchSeries,
-			"blue": self.manSearch,
-			"cancel": self.cancel,
-			"ok": self.ok
-		}, -1)
-
-		self['searchinfo'] = Label(_("Search for Covers ..."))
-		self['key_red'] = Label(_("Cancel"))
-		self['key_green'] = Label(_("Open cover file"))
-		self['key_yellow'] = Label(_("Find more covers"))
-		self['key_blue'] = Label(_("Search cover manual"))
-		self['list'] = createCoverList()		
-		
-		self.onLayoutFinish.append(self.onFinish)
-		
-	def onFinish(self):
-		self.setTitle(_("Cover finden ..."))
-		self.getCoverMovie()
-		
-	def manSearch(self):
-		self.session.openWithCallback(self.manSearchCB, VirtualKeyBoard, title = (_("Search for Cover:")), text = self.text)	
-	
-	def manSearchCB(self, text):
-		if text:
-			print "[CoverFind] " + text
-			self.text = text
-			self.getCoverMovie()
-			
-	def fileSearch(self):
-		start_dir = "/tmp/"
-		self.session.openWithCallback(self.fileSearchCB, CoverFindFile, start_dir)
-
-	def fileSearchCB(self, res):
-		if res:
-			print "[CoverFind] " + res
-			print "[CoverFind] " + self.savePath
-			extension = res.split('.')
-			extension = extension[-1].lower()
-			self.savePath = cleanEnd(self.savePath)
-			
-			if self.isDirectory:
-				print "[CoverFind] Folder"
-				target = self.savePath + "folder." + extension
-				print "[CoverFind] " + target
+	def startTimer(self):
+		if config.plugins.fmlc.bgtimer.value:
+			self.bgTimer = eTimer()
+			if isDreamOS:
+				self.bgTimer_conn = self.bgTimer.timeout.connect(self.getFileList)
 			else:
-				print "[CoverFind] File"
-				target = self.savePath + "." + extension
-				print "[CoverFind] " + target
-			try:		
-				shutil.copy(res, target)
-			except:
-				print "[CoverFind] User rights are not sufficiently!"
-			
-			self.close(False)
-		
-	def searchSeries(self):
-		#Proceed with search for series cover
-		self.getCoverTV()
+				self.bgTimer.callback.append(self.getFileList)
+			self.bgTimer.start(3600000 * int(config.plugins.fmlc.bgtime.value))
+			self.bgTimerRunning = True
+			print "----------------------- S t a r t - T i m e r -------------------------"
 
-	def getCoverMovie(self):
-		self['searchinfo'].setText(_("Try to find %s in tmdb ...")% self.text)
-		url = "http://api.themoviedb.org/3/search/movie?api_key=8789cfd3fbab7dccf1269c3d7d867aff&query=%s&language=de" % self.text.replace(' ','%20')
-		print "[CoverFind] " + url
-		getPage(url, headers={'Content-Type':'application/x-www-form-urlencoded'}).addCallback(self.readCoverMovie).addErrback(self.dataError)
+	def stopTimer(self):
+		if self.bgTimerRunning:
+			if not config.plugins.fmlc.bgtimer.value:
+				self.bgTimer.stop()
+				self.bgTimerRunning = False
+				print "----------------------- S t o p - T i m e r -------------------------"
 
-	def getCoverTV(self):
-		self['searchinfo'].setText(_("Try to find %s in tvdb ...")% self.text)
-		url = "http://thetvdb.com/api/GetSeries.php?seriesname=%s&language=de" % self.text.replace(' ','%20')
-		print "[CoverFind] " + url
-		getPage(url, headers={'Content-Type':'application/x-www-form-urlencoded'}).addCallback(self.readCoverTV).addErrback(self.dataError)
+	def setCallbacks(self, callback_infos, callback_found, callback_notfound, callback_error, callback_menulist, callback_finished):
+		# self.msgCallback, self.foundCallback, self.notFoundCallback, self.errorCallback, self.listCallback, self.msgDone
+		self.callback_infos = callback_infos
+		self.callback_found = callback_found
+		self.callback_notfound = callback_notfound
+		self.callback_error = callback_error
+		self.callback_menulist = callback_menulist
+		self.callback_finished = callback_finished
 
-	def readCoverMovie(self, data):
-		self.piclist = []
-		urls = []
-		list = re.findall('"id":(.*?),.*?original_title":"(.*?)".*?"poster_path":"(.*?)".*?title":"(.*?)"', data, re.S)
-		if list:
-			for id,otitle,coverPath,title in list:
-				coverUrl = "http://image.tmdb.org/t/p/w185"+coverPath
-				print "[CoverFind] " + title, coverUrl
-				urls.append((title, coverUrl, id))
+	def getFileList(self, background=True):
+		self.background = background
+		if not self.scanning:
+			print "----------------------- Cover Background Scanner -------------------------"
+			print "Scan Path: %s" % config.plugins.fmlc.scanpath.value
+			self.scanning = True
+			if config.plugins.fmlc.savestyle.value == "opennfr":
+				if not pathExists(config.plugins.fmlc.coverpath.value):
+					shutil.os.mkdir(config.plugins.fmlc.coverpath.value)
+			if not self.background:
+				self.callback_infos("Scanning: '%s'" % str(config.plugins.fmlc.scanpath.value))
+			data = []
+			symlinks_dupe = []
+			for root, dirs, files in os.walk(config.plugins.fmlc.scanpath.value, topdown=False, onerror=None, followlinks=config.plugins.fmlc.followsymlink.value):
+				if not root.endswith('/'):
+					root += "/"
+				slink = os.path.realpath(root)
+				if not slink in symlinks_dupe:
+					symlinks_dupe.append(slink)
+				else:
+					break
+				for file in files:
+					filename_org = os.path.join(root, file)
+					if any([file.endswith(x) for x in self.fileExtensions]):
+						if config.plugins.fmlc.savestyle.value == "opennfr":
+							filename = self.getMovieSaveFile(file)
+							if not filename is None:
+								filename = "%s%s.jpg" % (config.plugins.fmlc.coverpath.value, filename)
+							else:
+								continue
+						else:
+							filename = re.sub(fileExtensionsRemove + "$", '.jpg', filename_org)
+						if not fileExists(filename):
+							if os.path.isdir(filename_org):
+								url = 'http://api.themoviedb.org/3/search/movie?api_key=8789cfd3fbab7dccf1269c3d7d867aff&query=%s&language=de' % file.replace(' ','%20')
+								data.append(('dir', 'movie', filename, file, url, None, None))
+							else:
+								#cleanTitle = re.sub('\W.*?([0-9][0-9][0-9][0-9])', '', file)
+								# Remove Year
+								cleanTitle = re.sub('([0-9][0-9][0-9][0-9])', '', file)
+								# Remove fileExtensions
+								cleanTitle = cleanFile(cleanTitle)
+								if re.search('[Ss][0-9]+[Ee][0-9]+', file) is not None:
+									season = None
+									episode = None
+									seasonEpisode = re.findall('.*?[Ss]([0-9]+)[Ee]([0-9]+)', cleanTitle, re.S|re.I)
+									if seasonEpisode:
+										(season, episode) = seasonEpisode[0]
+									name2 = re.sub('[Ss][0-9]+[Ee][0-9]+.*[a-zA-Z0-9_]+','', cleanTitle, flags=re.S|re.I)
+									url = 'http://thetvdb.com/api/GetSeries.php?seriesname=%s&language=de' % name2.replace(' ','%20')
+									data.append(('file', 'serie', filename, name2, url, season, episode))
+								else:
+									url = 'http://api.themoviedb.org/3/search/movie?api_key=8789cfd3fbab7dccf1269c3d7d867aff&query=%s&language=de' % cleanTitle.replace(' ','%20')
+									data.append(('file', 'movie', filename, cleanTitle, url, None, None))
 
-		if len(urls) != 0:
-			ds = defer.DeferredSemaphore(tokens=2)
-			downloads = [ds.run(self.download, url, title).addCallback(self.buildList,title,url,id,"movie").addErrback(self.dataError) for title,url,id in urls]
-			finished = defer.DeferredList(downloads).addErrback(self.dataError)
-			self['searchinfo'].setText(_("Found for: %s") % self.text)
-		else:
-			self['searchinfo'].setText(_("%s not found.") % self.text)
+					elif file.endswith('.ts'):
+						metaName = None
+						#cleanTitle = re.sub('^.*? - .*? - ', '', file)
+						#cleanTitle = re.sub('[.]ts', '', cleanTitle)
+						if fileExists(filename_org+".meta"):
+							metaName = open(filename_org+".meta",'r').readlines()[1].rstrip("\n").rstrip("\t").rstrip("\r")
+							if config.plugins.fmlc.savestyle.value == "opennfr":
+								filename = "%s%s.jpg" % (config.plugins.fmlc.coverpath.value, metaName.replace(" ","_").replace(".","_"))
+							else:
+								filename = re.sub("\.ts$", '.jpg', filename_org)
+							if not fileExists(filename):
+								if metaName is not None:
+									if re.search('[Ss][0-9]+[Ee][0-9]+', metaName) is not None:
+									#if metaName is not None:
+										cleanTitle = re.sub('[Ss][0-9]+[Ee][0-9]+.*[a-zA-Z0-9_]+','', metaName, flags=re.S|re.I)
+										cleanTitle = cleanFile(cleanTitle)
+										print "cleanTitle:", cleanTitle
+										url = 'http://thetvdb.com/api/GetSeries.php?seriesname=%s&language=de' % cleanTitle.replace(' ','%20')
+										data.append(('file', 'serie', filename, cleanTitle, url, None, None))
+									#else:
+									#	url = 'http://thetvdb.com/api/GetSeries.php?seriesname=%s&language=de' % cleanTitle.replace(' ','%20')
+									#	data.append(('file', 'serie', filename, cleanTitle, url, None, None))
+									else:
+									#if metaName is not None:
+										url = 'http://api.themoviedb.org/3/search/movie?api_key=8789cfd3fbab7dccf1269c3d7d867aff&query=%s&language=de' % metaName.replace(' ','%20')
+										data.append(('file', 'movie', filename, metaName, url, None, None))
+									#else:
+									#	url = 'http://api.themoviedb.org/3/search/movie?api_key=8789cfd3fbab7dccf1269c3d7d867aff&query=%s&language=de' % cleanTitle.replace(' ','%20')
+									#	data.append(('file', 'serie', filename, cleanTitle, url, None, None))
 
-	def readCoverTV(self, data):
-		self.piclist = []
-		urls = []
-		tv = re.findall('<seriesid>(.*?)</seriesid>.*?<SeriesName>(.*?)</SeriesName>', data, re.S)
-		if tv:
-			for id,title in tv:
-				coverUrl1 = "http://www.thetvdb.com/banners/_cache/posters/%s-1.jpg" % str(id)
-				coverUrl2 = "http://www.thetvdb.com/banners/_cache/posters/%s-2.jpg" % str(id)
-				coverUrl3 = "http://www.thetvdb.com/banners/_cache/posters/%s-3.jpg" % str(id)
-				print "[CoverFind] " + title, coverUrl1
-				urls.append((title, coverUrl1, id, "1"))
-				urls.append((title, coverUrl2, id, "2"))
-				urls.append((title, coverUrl3, id, "3"))
-
-		if len(urls):
-			ds = defer.DeferredSemaphore(tokens=2)
-			downloads = [ds.run(self.download2, url, title, count).addCallback(self.buildList2,title,url,id,"tv",count).addErrback(self.dataError) for title,url,id,count in urls]
-			finished = defer.DeferredList(downloads).addErrback(self.dataError)
-			self['searchinfo'].setText(_("Found for: %s") % self.text)
-		else:
-			self['searchinfo'].setText(_("%s not found.") % self.text)
-
-	def dataError(self, error):
-		print "[CoverFind] " + "ERROR:", error
-
-	def download(self, url, title):
-		return downloadPage(url, '/tmp/'+title+'.jpg')
-
-	def download2(self, url, title, count):
-		return downloadPage(url, '/tmp/'+title+count+'.jpg')
-		
-	def buildList(self, data, title, url, id, type):
-		self.piclist.append(((title, '/tmp/'+title+'.jpg', id, type),))
-		self['list'].setList(self.piclist, 'Test')
-
-	def buildList2(self, data, title, url, id, type, count):
-		self.piclist.append(((title, '/tmp/'+title+count+'.jpg', id, type),))
-		self['list'].setList(self.piclist, 'Test')
-
-	
-	def ok(self):
-		check = self['list'].getCurrent()
-		if check == None:
-			return
-
-		bild = self['list'].getCurrent()[1]
-		idx = self['list'].getCurrent()[2]
-		type = self['list'].getCurrent()[3]
-		self.savePath = cleanEnd(self.savePath)
-
-		if fileExists(bild):
-			if self.isDirectory == True:
-				try:
-					shutil.move(bild, self.savePath + "folder.jpg")
-				except:
-					print "[CoverFind] User rights are not sufficiently!"
+			self.count = len(data)
+			if not self.background:
+				self.callback_infos("Found %s File(s)." % self.count)
+			if self.count != 0:
+				self.scanForCovers(data)
 			else:
-				try:
-					shutil.move(bild, self.savePath + ".jpg")
-				except:
-					print "[CoverFind] User rights are not sufficiently!"
+				if not self.background:
+					self.scanning = False
+					self.callback_infos("No Movie(s) found!")
+					self.callback_finished("Done")
+				else:
+					self.scanning = False
+		else:
+			print "still scanning.."
 
-		iurl = "http://api.themoviedb.org/3/movie/%s?api_key=8789cfd3fbab7dccf1269c3d7d867aff&language=de" % idx
-		print "[CoverFind] " + iurl
-		getPage(iurl, headers={'Content-Type':'application/x-www-form-urlencoded'}).addCallback(self.getInfos, type).addErrback(self.dataError)
-		self.close(False)
+	def getMovieSaveFile(self, moviename):
+		if re.search('[Ss][0-9]+[Ee][0-9]+', moviename) is not None:
+			tvseries = compile('(.*\w)[\s\.|-]+[S|s][0-9]+[E|e][0-9]+[\s\.|-].*?\.[ts|avi|mkv|divx|f4v|flv|img|iso|m2ts|m4v|mov|mp4|mpeg|mpg|mts|vob|wmv]')
+			tvseriesalt = compile('^[S|s][0-9]+[E|e][0-9]+[\s\.\-](.*\w)\.[ts|avi|mkv|divx|f4v|flv|img|iso|m2ts|m4v|mov|mp4|mpeg|mpg|mts|vob|wmv]')
+			if tvseries.match(moviename) is not None:
+				return tvseries.match(moviename).groups()[0].replace(" ","_").replace(".","_")
+			elif tvseriesalt.match(moviename) is not None:
+				return tvseriesalt.match(moviename).groups()[0].replace(" ","_").replace(".","_")
+			else:
+				return None
+		else:
+			movietitle = compile('(.*\w)\.[ts|avi|mkv|divx|f4v|flv|img|iso|m2ts|m4v|mov|mp4|mpeg|mpg|mts|vob|wmv]')
+			if movietitle.match(moviename) is not None:
+				return movietitle.match(moviename).groups()[0].replace(" ","_").replace(".","_")
+			else:
+				return None
 
-	def getInfos(self, data, type):
+	def scanForCovers(self, data):
+		self.start_time = time.clock()
+		# filename', 'serie', filename, cleanTitle, url, season, episode
+		self.guilist = []
+		self.counting = 0
+		self.found = 0
+		self.notfound = 0
+		self.error = 0
+		ds = defer.DeferredSemaphore(tokens=2)
+		downloads = [ds.run(self.download, url).addCallback(self.parseWebpage, which, type, filename, title, url, season, episode).addErrback(self.dataErrorInfo) for which, type, filename, title, url, season, episode in data]
+		finished = defer.DeferredList(downloads).addErrback(self.dataErrorInfo)
+
+	def download(self, url):
+		return getPage(url, timeout=20, headers={'Accept': 'application/json'})
+
+	def parseWebpage(self, data, which, type, filename, title, url, season, episode):
+		self.counting += 1
+		if not self.background:
+			self.callback_infos("Cover(s): %s / %s - Scan: %s" % (str(self.counting), str(self.count), title))
 		if type == "movie":
-			infos = re.findall('"genres":\[(.*?)\].*?"overview":"(.*?)",', data, re.S)
+			list = []
+			list = re.findall('original_title":"(.*?)".*?"poster_path":"(.*?)"', data, re.S)
+			if list:
+				self.guilist.append(((title, True, filename),))
+				purl = "http://image.tmdb.org/t/p/%s%s" % (config.plugins.fmlc.themoviedb_coversize.value, list[0][1])
+				downloadPage(purl, filename).addCallback(self.countFound).addErrback(self.dataErrorDownload)
+			else:
+				self.guilist.append(((title, False, filename),))
+				self.notfound += 1
+				if not self.background:
+					self.callback_notfound(self.notfound)
+
+			# get description
+			if config.plugins.fmlc.getdescription.value:
+				idx = []
+				idx = re.findall('"id":(.*?),', data, re.S)
+				if idx:
+					iurl = "http://api.themoviedb.org/3/movie/%s?api_key=8789cfd3fbab7dccf1269c3d7d867aff&language=de" % idx[0]
+					getPage(iurl, headers={'Content-Type':'application/x-www-form-urlencoded'}).addCallback(self.getInfos, id, type, filename).addErrback(self.dataError)
+
+		elif type == "serie":
+			list = []
+			list = re.findall('<seriesid>(.*?)</seriesid>', data, re.S)
+			if list:
+				self.guilist.append(((title, True, filename),))
+				purl = "http://www.thetvdb.com/banners/_cache/posters/%s-1.jpg" % list[0]
+				downloadPage(purl, filename).addCallback(self.countFound).addErrback(self.dataErrorDownload)
+			else:
+				self.notfound += 1
+				self.guilist.append(((title, False, filename),))
+				if not self.background:
+					self.callback_notfound(self.notfound)
+
+			# get description
+			if config.plugins.fmlc.getdescription.value:
+				if season and episode:
+					iurl = "http://www.thetvdb.com/api/2AAF0562E31BCEEC/series/%s/default/%s/%s/de.xml" % (list[0], str(int(season)), str(int(episode)))
+					getPage(iurl, headers={'Content-Type':'application/x-www-form-urlencoded'}).addCallback(self.getInfos, id, type, filename).addErrback(self.dataError)
+		else:
+			self.notfound += 1
+			if not self.background:
+				self.callback_notfound(self.notfound)
+
+		if not self.background:
+			self.callback_menulist(self.guilist)
+		self.checkDone()
+
+	def checkDone(self):
+		print self.counting, self.count
+		if int(self.counting) == int(str(self.count)):
+			elapsed_time = (time.clock() - self.start_time)
+			if not self.background:
+				self.callback_infos("Downloaded %s Cover(s) in %.1f sec." % (str(self.found), elapsed_time))
+				self.callback_finished("Done")
+			self.scanning = False
+			print "Found:", self.found
+			print "Not Found:", self.notfound
+			print "Errors:", self.error
+			print "Total: %s / %s" % (self.counting, self.count)
+			self.callback_finished(self.count)
+
+	def countFound(self, data):
+		self.found += 1
+		if not self.background:
+			self.callback_found(self.found)
+			if int(self.counting) == int(str(self.count)):
+				elapsed_time = (time.clock() - self.start_time)
+				self.callback_infos("Downloaded %s Cover(s) in %.1f sec." % (str(self.found), elapsed_time))
+		self.checkDone()
+
+	def getInfos(self, data, id, type, filename):
+		if type == "movie":
+			infos = re.findall('"genres":\[(.*?)\].*?"overview":"(.*?)"', data, re.S)
 			if infos:
 				(genres, desc) = infos[0]
-				genre = re.findall('"name":"(.*?)"', genres, re.S)
-				genre = str(genre).replace('\'','').replace('[','').replace(']','')
-				self.cur.execute('UPDATE files SET description=?, genre=? WHERE id=?', (decodeHtml(desc), decodeHtml(genre), self.id))
+				self.writeTofile(decodeHtml(desc), filename)
 
-		elif type == "tv":
+		elif type == "serie":
 			infos = re.findall('<Overview>(.*?)</Overview>', data, re.S)
 			if infos:
 				desc = infos[0]
-				print "beschreibung:", desc
-				self.cur.execute('UPDATE files SET description=? WHERE id=?', (decodeHtml(desc), self.id))
+				self.writeTofile(decodeHtml(desc), filename)
+
+	def writeTofile(self, text, filename):
+		if not fileExists(filename.replace('.jpg','.txt')):
+			wFile = open(filename.replace('.jpg','.txt'),"w") 
+			wFile.write(text) 
+			wFile.close()
 
 	def dataError(self, error):
-		print error
+		print "ERROR:", error
+		self.checkDone()
 
-	def cancel(self):
-		self.close(False)
-		
-	def baseName(self, str):
-		name = str.split('/')[-1]
-		return name
+	def dataErrorInfo(self, error):
+		self.error += 1
+		self.counting += 1
+		print "ERROR dataErrorInfo:", error
+		if not self.background:
+			self.callback_error(self.error)
+		self.checkDone()
 
-class createCoverList(GUIComponent, object):
+	def dataErrorDownload(self, error):
+		self.error += 1
+		self.counting += 1
+		if not self.background:
+			self.callback_error(self.error)
+		print "ERROR:", error
+		self.checkDone()
+
+class fmlcMenuList(GUIComponent, object):
 	GUI_WIDGET = eListbox
 	
 	def __init__(self):
 		GUIComponent.__init__(self)
 		self.l = eListboxPythonMultiContent()
 		self.l.setFont(0, gFont('Regular', 22))
-		self.l.setItemHeight(138)
+		self.l.setItemHeight(30)
 		self.l.setBuildFunc(self.buildList)
 
 	def buildList(self, entry):
 		width = self.l.getItemSize().width()
-		(title, bild, id, type) = entry
+		(name, coverFound, filename) = entry
 		res = [ None ]
 
-		self.picloader = PicLoader(92, 138)
-		bild = self.picloader.load(bild)
-		#color, color_sel, backcolor, backcolor_sel
-		res.append((eListboxPythonMultiContent.TYPE_PIXMAP_ALPHATEST, 0, 0, 138, 138, bild))
-		self.picloader.destroy()
-		res.append((eListboxPythonMultiContent.TYPE_TEXT, 150, 0, 1280, 30, 0, RT_HALIGN_LEFT | RT_VALIGN_CENTER, str(title)))
+		if coverFound:
+			truePath = "skin_default/images/cover_yes.png"
+			res.append((eListboxPythonMultiContent.TYPE_PIXMAP_ALPHATEST, 10, 1, 25, 25, loadPNG(truePath)))
+		else:
+			falsePath = "skin_default/images/cover_no.png"
+			res.append((eListboxPythonMultiContent.TYPE_PIXMAP_ALPHATEST, 10, 1, 25, 25, loadPNG(falsePath)))
+
+		res.append((eListboxPythonMultiContent.TYPE_TEXT, 50, 0, 1280, 30, 0, RT_HALIGN_LEFT | RT_VALIGN_CENTER, str(name)))
 		return res
 
 	def getCurrent(self):
@@ -392,8 +426,7 @@ class createCoverList(GUIComponent, object):
 	def preWidgetRemove(self, instance):
 		instance.setContent(None)
 
-	def setList(self, list, type):
-		self.type = type
+	def setList(self, list):
 		self.l.setList(list)
 
 	def moveToIndex(self, idx):
@@ -425,27 +458,275 @@ class createCoverList(GUIComponent, object):
 		if self.instance is not None:
 			self.instance.moveSelection(self.instance.moveDown)
 
-class CoverFindFile(Screen):
+class FindMovieListCoverSetup(Screen, ConfigListScreen):
 	skin = """
-		<screen name="CoverFindFile" position="40,80" size="1200,600" title=" ">
-			<widget name="media" position="10,10" size="1180,30" font="Regular;24" foregroundColor="unfff000" />
-			<widget name="filelist" position="10,60" size="800,480" scrollbarMode="showOnDemand" />
-			<widget name="picture" position="850,90" size="300,420" alphatest="blend" />
-			<widget name="key_red" position="53,568" size="260,25" transparent="1" font="Regular;20" />
-			<widget name="key_green" position="370,568" size="260,25" transparent="1" font="Regular;20" />
-			<widget name="key_yellow" position="681,568" size="260,25" transparent="1" font="Regular;20" />
-			<ePixmap pixmap="skin_default/buttons/red.png" position="17,566" size="30,30" alphatest="blend" />
-			<ePixmap pixmap="skin_default/buttons/green.png" position="335,566" size="30,30" alphatest="blend" />
-			<ePixmap pixmap="skin_default/buttons/yellow.png" position="647,566" size="30,30" alphatest="blend" />
-			</screen>"""
+		<screen position="40,80" size="1200,600" title=" " >
+			<widget name="info" position="10,10" size="1180,30" font="Regular;24" foregroundColor="#00fff000"/>
+			<widget name="config" position="10,60" size="1180,480" transparent="1" scrollbarMode="showOnDemand" />
+			<widget name="key_red" position="40,570" size="250,25" halign="center" transparent="1" font="Regular;20"/>
+			<widget name="key_green" position="330,570" size="250,22" halign="center" transparent="1" font="Regular;20"/>
+			<widget name="key_yellow" position="620,570" size="250,22" halign="center" transparent="1" font="Regular;20"/>
+			<widget name="key_blue" position="890,570" size="250,22" halign="center" transparent="1" font="Regular;20"/>
+			<eLabel position="40,596" size="250,4" zPosition="-10" backgroundColor="#20f23d21" />
+			<eLabel position="330,596" size="250,4" zPosition="-10" backgroundColor="#20389416" />
+			<eLabel position="620,596" size="250,4" zPosition="-10" backgroundColor="#20e6dd2b" />
+			<eLabel position="890,596" size="250,4" zPosition="-10" backgroundColor="#200064c7" />
+		</screen>"""
+
+	def __init__(self, session):
+		Screen.__init__(self, session)
+		self.session = session
+
+		self["actions"]  = ActionMap(["OkCancelActions", "ShortcutActions", "WizardActions", "ColorActions", "SetupActions", "NumberActions", "MenuActions", "EPGSelectActions"], {
+			"cancel": self.cancel,
+			"red": self.cancel,
+			"green"	: self.save
+		}, -1)
+
+		self['info'] = Label("Settings:")
+		self['key_red'] = Label("Cancel")
+		self['key_green'] = Label("Ok")
+		self['key_yellow'] = Label("")
+		self['key_blue'] = Label("")
+
+		self.list = []
+		self.createConfigList()
+		ConfigListScreen.__init__(self, self.list)
+		self.fileScanner = BackgroundCoverScanner.instance
+
+	def createConfigList(self):
+		self.setTitle(pname)
+		self.list = []
+		self.list.append(getConfigListEntry("Cover resolution for themoviedb.org:", config.plugins.fmlc.themoviedb_coversize))
+		self.list.append(getConfigListEntry("Save Cover(s) for (MovieList):", config.plugins.fmlc.savestyle))
+		if config.plugins.fmlc.savestyle.value == "opennfr":
+			self.list.append(getConfigListEntry("Save Cover(s) to Path:", config.plugins.fmlc.coverpath))
+			config.plugins.fmlc.getdescription.value = False
+		self.list.append(getConfigListEntry("Search in symlinks:", config.plugins.fmlc.followsymlink))
+		self.list.append(getConfigListEntry("Save Movie Description to Moviename.txt:", config.plugins.fmlc.getdescription))
+		self.list.append(getConfigListEntry("Scan for Cover(s) in Background:", config.plugins.fmlc.bgtimer))
+		if config.plugins.fmlc.bgtimer.value:
+			self.list.append(getConfigListEntry("Background Scan for new Cover(s) every (stunden):", config.plugins.fmlc.bgtime))
+
+	def changedEntry(self):
+		self.createConfigList()
+		self["config"].setList(self.list)
+
+	def keyLeft(self):
+		ConfigListScreen.keyLeft(self)
+		self.changedEntry()
+
+	def keyRight(self):
+		ConfigListScreen.keyRight(self)
+		self.changedEntry()
+
+	def save(self):
+		config.plugins.fmlc.themoviedb_coversize.save()
+		config.plugins.fmlc.followsymlink.save()
+		config.plugins.fmlc.getdescription.save()
+		config.plugins.fmlc.savestyle.save()
+		config.plugins.fmlc.bgtimer.save()
+		config.plugins.fmlc.bgtime.save()
+		config.plugins.fmlc.coverpath.save()
+		if config.plugins.fmlc.bgtimer.value:
+			self.fileScanner.startTimer()
+		else:
+			self.fileScanner.stopTimer()
+		configfile.save()
+		self.close()
+
+	def cancel(self):
+		self.close()
+
+class FindMovieList(Screen):
+	skin = """
+		<screen position="40,80" size="1200,600" title=" " >
+			<widget name="info" position="10,10" size="820,30" font="Regular;24" foregroundColor="#00fff000"/>
+			<widget name="path" position="10,50" size="820,30" font="Regular;24" foregroundColor="#00fff000"/>
+			<widget name="found" position="850,10" size="300,22" font="Regular;20" foregroundColor="#00fff000"/>
+			<widget name="notfound" position="850,40" size="300,22" font="Regular;20" foregroundColor="#00fff000"/>
+			<widget name="error" position="850,70" size="300,22" font="Regular;20" foregroundColor="#00fff000"/>
+			<widget name="list" position="10,90" size="800,480" scrollbarMode="showOnDemand"/>
+			<widget name="cover" position="850,110" size="300,420" alphatest="blend"/>
+			<widget name="key_red" position="40,570" size="250,25" halign="center" transparent="1" font="Regular;20"/>
+			<widget name="key_green" position="330,570" size="250,22" halign="center" transparent="1" font="Regular;20"/>
+			<widget name="key_yellow" position="620,570" size="250,22" halign="center" transparent="1" font="Regular;20"/>
+			<widget name="key_blue" position="890,570" size="250,22" halign="center" transparent="1" font="Regular;20"/>
+			<eLabel position="40,596" size="250,4" zPosition="-10" backgroundColor="#20f23d21" />
+			<eLabel position="330,596" size="250,4" zPosition="-10" backgroundColor="#20389416" />
+			<eLabel position="620,596" size="250,4" zPosition="-10" backgroundColor="#20e6dd2b" />
+			<eLabel position="890,596" size="250,4" zPosition="-10" backgroundColor="#200064c7" />
+		</screen>"""
+
+	def __init__(self, session, service):
+		Screen.__init__(self, session)
+		self.session = session
+		self.service = service
+		BackgroundCoverScanner(session)
+		bg_func = BackgroundCoverScanner.instance
+		bg_func.startTimer()
+		self["actions"]  = ActionMap(["OkCancelActions", "ShortcutActions", "WizardActions", "ColorActions", "SetupActions", "NumberActions", "MenuActions", "EPGSelectActions"], {
+			"cancel":	self.cancel,
+			"green" :	self.getFileList,
+			"yellow":	self.setup,
+			"blue"	:	self.setScanPath,
+			"left"  :	self.keyLeft,
+			"right" :	self.keyRight,
+			"up"    :	self.keyUp,
+			"down"  :	self.keyDown,
+			"ok"	:	self.keyOk
+		}, -1)
+
+		#self['title'] 
+		self.title = "%s v%s" % (pname, pversion)
+		self['info'] = Label("")
+		self['path'] = Label("Scan Path: %s" % config.plugins.fmlc.scanpath.value)
+		self['found'] = Label("Download:")
+		self['notfound'] = Label("Not Found:")
+		self['error'] = Label("Download Error:")
+		self['cover'] = Pixmap()
+		self['key_red'] = Label("Exit")
+		self['key_green'] = Label("Search Cover(s)")
+		self['key_yellow'] = Label("Setup")
+		self['key_blue'] = Label("Set Scan Path")
+		self['list'] = fmlcMenuList()
+		
+		self.fileScanner = BackgroundCoverScanner.instance
+		self.fileScanner.setCallbacks(self.msgCallback, self.foundCallback, self.notFoundCallback, self.errorCallback, self.listCallback, self.msgDone)
+		self.scanning = False
+		self.first = False
+		self.onLayoutFinish.append(self._onLayoutFinish)
+
+	def _onLayoutFinish(self):
+		self['info'].setText("Press 'Green' for scanning your MovieList and search Cover(s).")
+
+	def msgCallback(self, txt):
+		self['info'].setText(txt)
+
+	def foundCallback(self, txt):
+		self['found'].setText("Download: %s" % str(txt))
+
+	def notFoundCallback(self, txt):
+		self['notfound'].setText("Not Found: %s" % str(txt))
+	
+	def errorCallback(self, txt):
+		self['error'].setText("Download Error: %s" % str(txt))
+
+	def listCallback(self, list):
+		self['list'].setList(list)
+		if not self.first:
+			self.first = True
+			self.getCover()
+
+	def msgDone(self, txt):
+		self.first = True
+
+	def __onClose(self):
+		self.fileScanner.setCallbacks(None, None, None, None, None, None)
+
+	def getFileList(self):
+		self['found'].setText("Download:")
+		self['notfound'].setText("Not Found:")
+		self['error'].setText("Download Error:")
+		self.fileScanner.getFileList(False)
+
+	def getCover(self):
+		check = self['list'].getCurrent()
+		if check == None:
+			return
+		filename = self['list'].getCurrent()[2]
+		self.showCover(filename)
+
+	def showCover(self, poster_path):
+		self.picload = ePicLoad()
+		if not fileExists(poster_path):
+			poster_path = "skin_default/images/no_cover.png"
+		if fileExists(poster_path):
+			self["cover"].instance.setPixmap(gPixmapPtr())
+			scale = AVSwitch().getFramebufferScale()
+			size = self["cover"].instance.size()
+			self.picload.setPara((size.width(), size.height(), scale[0], scale[1], False, 1, "#00000000"))
+			if isDreamOS:
+				if self.picload.startDecode(poster_path, False) == 0:
+					ptr = self.picload.getData()
+					if ptr != None:
+						self["cover"].instance.setPixmap(ptr)
+						self["cover"].show()
+			else:
+				if self.picload.startDecode(poster_path, 0, 0, False) == 0:
+					ptr = self.picload.getData()
+					if ptr != None:
+						self["cover"].instance.setPixmap(ptr)
+						self["cover"].show()
+			del self.picload
+
+	def setup(self):
+		self.session.open(FindMovieListCoverSetup)
+
+	def keyOk(self):
+		pass
+		
+	def setScanPath(self):
+		self.session.openWithCallback(self.selectedMediaFile, FindMovieListScanPath, config.plugins.fmlc.scanpath.value)
+
+	def selectedMediaFile(self, res):
+		if res is not None:
+			config.plugins.fmlc.scanpath.value = res
+			config.plugins.fmlc.scanpath.save()
+			configfile.save()
+			self['path'].setText("Scan Path: %s" % config.plugins.fmlc.scanpath.value)
+	
+	def keyLeft(self):
+		check = self['list'].getCurrent()
+		if check == None:
+			return
+		self['list'].pageUp()
+		self.getCover()
+
+	def keyRight(self):
+		check = self['list'].getCurrent()
+		if check == None:
+			return
+		self['list'].pageDown()
+		self.getCover()
+
+	def keyDown(self):
+		check = self['list'].getCurrent()
+		if check == None:
+			return
+		self['list'].down()
+		self.getCover()
+
+	def keyUp(self):
+		check = self['list'].getCurrent()
+		if check == None:
+			return
+		self['list'].up()
+		self.getCover()
+
+	def cancel(self):
+		self.close()
+
+class FindMovieListScanPath(Screen):
+	skin = """
+		<screen position="40,80" size="1200,600" title=" " >
+			<widget name="media" position="10,10" size="540,30" valign="top" font="Regular;22" />
+			<widget name="folderlist" position="10,45" zPosition="1" size="540,300" scrollbarMode="showOnDemand"/>
+			<widget name="key_red" position="40,570" size="250,25" halign="center" transparent="1" font="Regular;20"/>
+			<widget name="key_green" position="330,570" size="250,22" halign="center" transparent="1" font="Regular;20"/>
+			<eLabel position="40,596" size="250,4" zPosition="-10" backgroundColor="#20f23d21" />
+			<eLabel position="330,596" size="250,4" zPosition="-10" backgroundColor="#20389416" />
+		</screen>
+		"""
 
 	def __init__(self, session, initDir, plugin_path = None):
 		Screen.__init__(self, session)
-		#self.skin_path = plugin_path
-		self["filelist"] = FileList(initDir, inhibitMounts = False, inhibitDirs = False, showMountpoints = False, matchingPattern = "(?i)^.*\.(jpg|png)")
-		self["media"] = Label()
-		self["picture"] = Pixmap()
 		
+		if not os.path.isdir(initDir):
+			initDir = "/media/hdd/movie/"
+
+		self["folderlist"] = FileList(initDir, inhibitMounts = False, inhibitDirs = False, showMountpoints = False, showFiles = False)
+		self["media"] = Label()
 		self["actions"] = ActionMap(["WizardActions", "DirectionActions", "ColorActions", "EPGSelectActions"],
 		{
 			"back": self.cancel,
@@ -454,338 +735,160 @@ class CoverFindFile(Screen):
 			"up": self.up,
 			"down": self.down,
 			"ok": self.ok,
-			"yellow": self.yellow,
 			"green": self.green,
 			"red": self.cancel
 		}, -1)
-
-		self.title=_("Select a cover file")
+		self.title=_("Choose Download folder")
 		try:
-			self["title"]=StaticText(self.title)
+			self["title"] = StaticText(self.title)
 		except:
-			print 'self["title"] was not found in skin'	
-			
-		self['key_red'] = Label(_("Cancel"))
-		self['key_green'] = Label(_("Select Cover"))
-		self['key_yellow'] = Label(_("Delete cover"))
+			print 'self["title"] was not found in skin'
+
+		self["key_red" ]= Label(_("Cancel"))
+		self["key_green"] = Label(_("Ok"))
 
 	def cancel(self):
 		self.close(None)
 
 	def green(self):
-		if self["filelist"].getSelection()[1] == True:
-			self["media"].setText(_("Invalid Choice"))
+		directory = self["folderlist"].getSelection()[0]
+		if (directory.endswith("/")):
+			self.fullpath = self["folderlist"].getSelection()[0]
 		else:
-			directory = self["filelist"].getCurrentDirectory()
-			if (directory.endswith("/")):
-				self.fullpath = self["filelist"].getCurrentDirectory() + self["filelist"].getFilename()
-			else:
-				self.fullpath = self["filelist"].getCurrentDirectory() + "/" + self["filelist"].getFilename()
-			self.close(self.fullpath)
+			self.fullpath = self["folderlist"].getSelection()[0] + "/"
+	  	self.close(self.fullpath)
 
-	def yellow(self):
-		if self["filelist"].getSelection()[1] == True:
-			self["media"].setText(_("Invalid Choice"))
-		else:
-			print "[CoverFind] remove " + self.fullpath
-			remove(self.fullpath)
-			self["filelist"].refresh()
-			self.updateFile()
-			
 	def up(self):
-		self["filelist"].up()
+		self["folderlist"].up()
 		self.updateFile()
 
 	def down(self):
-		self["filelist"].down()
+		self["folderlist"].down()
 		self.updateFile()
 
 	def left(self):
-		self["filelist"].pageUp()
+		self["folderlist"].pageUp()
 		self.updateFile()
 
 	def right(self):
-		self["filelist"].pageDown()
+		self["folderlist"].pageDown()
 		self.updateFile()
 
 	def ok(self):
-		if self["filelist"].canDescent():
-			self["filelist"].descent()
+		if self["folderlist"].canDescent():
+			self["folderlist"].descent()
 			self.updateFile()
 
 	def updateFile(self):
-		currFolder = self["filelist"].getSelection()[0]
-		if self["filelist"].getFilename() is not None:
-			directory = self["filelist"].getCurrentDirectory()
-			if (directory.endswith("/")):
-				self.fullpath = self["filelist"].getCurrentDirectory() + self["filelist"].getFilename()
-			else:
-				self.fullpath = self["filelist"].getCurrentDirectory() + "/" + self["filelist"].getFilename()
-			
-			self["media"].setText(self["filelist"].getFilename())
+		currFolder = self["folderlist"].getSelection()[0]
+		self["media"].setText(currFolder)
 
-		else:
-			currFolder = self["filelist"].getSelection()[0]
-			if currFolder is not None:
-				self["media"].setText(currFolder)
-			else:
-				self["media"].setText(_("Invalid Choice"))
+def decodeHtml(text):
+	text = text.replace('&auml;','Ã¤')
+	text = text.replace('\u00e4','Ã¤')
+	text = text.replace('&#228;','Ã¤')
+	text = text.replace('&Auml;','Ã„')
+	text = text.replace('\u00c4','Ã„')
+	text = text.replace('&#196;','Ã„')
+	text = text.replace('&ouml;','Ã¶')
+	text = text.replace('\u00f6','Ã¶')
+	text = text.replace('&#246;','Ã¶')
+	text = text.replace('&ouml;','Ã–')
+	text = text.replace('&Ouml;','Ã–')
+	text = text.replace('\u00d6','Ã–')
+	text = text.replace('&#214;','Ã–')
+	text = text.replace('&uuml;','Ã¼')
+	text = text.replace('\u00fc','Ã¼')
+	text = text.replace('&#252;','Ã¼')
+	text = text.replace('&Uuml;','Ãœ')
+	text = text.replace('\u00dc','Ãœ')
+	text = text.replace('&#220;','Ãœ')
+	text = text.replace('&szlig;','ÃŸ')
+	text = text.replace('\u00df','ÃŸ')
+	text = text.replace('&#223;','ÃŸ')
+	text = text.replace('&amp;','&')
+	text = text.replace('&quot;','\"')
+	text = text.replace('&gt;','>')
+	text = text.replace('&apos;',"'")
+	text = text.replace('&acute;','\'')
+	text = text.replace('&ndash;','-')
+	text = text.replace('&bdquo;','"')
+	text = text.replace('&rdquo;','"')
+	text = text.replace('&ldquo;','"')
+	text = text.replace('&lsquo;','\'')
+	text = text.replace('&rsquo;','\'')
+	text = text.replace('&#034;','"')
+	text = text.replace('&#34;','"')
+	text = text.replace('&#038;','&')
+	text = text.replace('&#039;','\'')
+	text = text.replace('&#39;','\'')
+	text = text.replace('&#160;',' ')
+	text = text.replace('\u00a0',' ')
+	text = text.replace('\u00b4','\'')
+	text = text.replace('\u003d','=')
+	text = text.replace('\u0026','&')
+	text = text.replace('&#174;','')
+	text = text.replace('&#225;','a')
+	text = text.replace('&#233;','e')
+	text = text.replace('&#243;','o')
+	text = text.replace('&#8211;',"-")
+	text = text.replace('&#8212;',"â€”")
+	text = text.replace('&mdash;','â€”')
+	text = text.replace('\u2013',"â€“")
+	text = text.replace('&#8216;',"'")
+	text = text.replace('&#8217;',"'")
+	text = text.replace('&#8220;',"'")
+	text = text.replace('&#8221;','"')
+	text = text.replace('&#8222;',',')
+	text = text.replace('\u014d','Å')
+	text = text.replace('\u016b','Å«')
+	text = text.replace('\u201a','\"')
+	text = text.replace('\u2018','\"')
+	text = text.replace('\u201e','\"')
+	text = text.replace('\u201c','\"')
+	text = text.replace('\u201d','\'')
+	text = text.replace('\u2019s','â€™')
+	text = text.replace('\u00e0','Ã ')
+	text = text.replace('\u00e7','Ã§')
+	text = text.replace('\u00e8','Ã©')
+	text = text.replace('\u00e9','Ã©')
+	text = text.replace('\u00c1','Ã')
+	text = text.replace('\u00c6','Ã†')
+	text = text.replace('\u00e1','Ã¡')
+	text = text.replace('&#xC4;','Ã„')
+	text = text.replace('&#xD6;','Ã–')
+	text = text.replace('&#xDC;','Ãœ')
+	text = text.replace('&#xE4;','Ã¤')
+	text = text.replace('&#xF6;','Ã¶')
+	text = text.replace('&#xFC;','Ã¼')
+	text = text.replace('&#xDF;','ÃŸ')
+	text = text.replace('&#xE9;','Ã©')
+	text = text.replace('&#xB7;','Â·')
+	text = text.replace("&#x27;","'")
+	text = text.replace("&#x26;","&")
+	text = text.replace("&#xFB;","Ã»")
+	text = text.replace("&#xF8;","Ã¸")
+	text = text.replace("&#x21;","!")
+	text = text.replace("&#x3f;","?")
+	text = text.replace('&#8230;','...')
+	text = text.replace('\u2026','...')
+	text = text.replace('&hellip;','...')
+	text = text.replace('&#8234;','')
+	return text
 
-		print "[CoverFind] " + self.fullpath		
-		self.showPreview(self.fullpath)
+def autostart(session, **kwargs):
+	BackgroundCoverScanner(session)
+	bg_func = BackgroundCoverScanner.instance
+	bg_func.startTimer()
 
-	def showPreview(self, pic):
-		if pic:
-			jpgpath = pic
-			if jpgpath and os.path.exists(jpgpath):
-				sc = AVSwitch().getFramebufferScale()
-				size = self["picture"].instance.size()
-				self.picload = ePicLoad()
-				self.picload.PictureData.get().append(self.showPreviewCB)
-				if self.picload:
-					self.picload.setPara((size.width(), size.height(), sc[0], sc[1], False, 1, "#00000000"))
-					if self.picload.startDecode(jpgpath) != 0:
-						del self.picload
-			else:
-				self["picture"].hide()
-		else:
-			self["picture"].hide()
+def main(session, service, **kwargs):
+	session.open(FindMovieList, service)
 
-	def showPreviewCB(self, picInfo=None):
-		if self.picload and picInfo:
-			ptr = self.picload.getData()
-			if ptr != None:
-				self["picture"].instance.setPixmap(ptr)
-				self["picture"].show()
-			del self.picload
+def main2(session, **kwargs):
+	session.open(FindMovieList, None)
 
-# FileList mod
-EXTENSIONS = {"jpg": "picture",	"png": "picture"}
-		
-def FileEntryComponent(name, absolute = None, isDir = False):
-	res = [ (absolute, isDir) ]
-	res.append((eListboxPythonMultiContent.TYPE_TEXT, 35, 1, 1280, 30, 0, RT_HALIGN_LEFT, name))
-	if isDir:
-		png = LoadPixmap(cached=True, path=resolveFilename(SCOPE_CURRENT_SKIN, "extensions/directory.png"))
-	else:
-		extension = name.split('.')
-		extension = extension[-1].lower()
-		if EXTENSIONS.has_key(extension):
-			png = LoadPixmap(resolveFilename(SCOPE_CURRENT_SKIN, "extensions/" + EXTENSIONS[extension] + ".png"))
-		else:
-			png = None
-	if png is not None:
-		res.append((eListboxPythonMultiContent.TYPE_PIXMAP_ALPHATEST, 10, 5, 20, 20, png))
-	
-	return res
-
-class FileList(MenuList):
-	def __init__(self, directory, showDirectories = True, showFiles = True, showMountpoints = True, matchingPattern = None, useServiceRef = False, inhibitDirs = False, inhibitMounts = False, isTop = False, enableWrapAround = False, additionalExtensions = None):
-		MenuList.__init__(self, list, enableWrapAround, eListboxPythonMultiContent)
-		self.additional_extensions = additionalExtensions
-		self.mountpoints = []
-		self.current_directory = None
-		self.current_mountpoint = None
-		self.useServiceRef = useServiceRef
-		self.showDirectories = showDirectories
-		self.showMountpoints = showMountpoints
-		self.showFiles = showFiles
-		self.isTop = isTop
-		# example: matching .nfi and .ts files: "^.*\.(nfi|ts)"
-		self.matchingPattern = matchingPattern
-		self.inhibitDirs = inhibitDirs or []
-		self.inhibitMounts = inhibitMounts or []
-
-		self.refreshMountpoints()
-		self.changeDir(directory)
-		self.l.setFont(0, gFont("Regular", 22))
-		self.l.setItemHeight(30)
-		self.serviceHandler = eServiceCenter.getInstance()
-
-	def refreshMountpoints(self):
-		self.mountpoints = [os_path.join(p.mountpoint, "") for p in harddiskmanager.getMountedPartitions()]
-		self.mountpoints.sort(reverse = True)
-
-	def getMountpoint(self, file):
-		file = os_path.join(os_path.realpath(file), "")
-		for m in self.mountpoints:
-			if file.startswith(m):
-				return m
-		return False
-
-	def getMountpointLink(self, file):
-		if os_path.realpath(file) == file:
-			return self.getMountpoint(file)
-		else:
-			if file[-1] == "/":
-				file = file[:-1]
-			mp = self.getMountpoint(file)
-			last = file
-			file = os_path.dirname(file)
-			while last != "/" and mp == self.getMountpoint(file):
-				last = file
-				file = os_path.dirname(file)
-			return os_path.join(last, "")
-
-	def getSelection(self):
-		if self.l.getCurrentSelection() is None:
-			return None
-		return self.l.getCurrentSelection()[0]
-
-	def getCurrentEvent(self):
-		l = self.l.getCurrentSelection()
-		if not l or l[0][1] == True:
-			return None
-		else:
-			return self.serviceHandler.info(l[0][0]).getEvent(l[0][0])
-
-	def getFileList(self):
-		return self.list
-
-	def inParentDirs(self, dir, parents):
-		dir = os_path.realpath(dir)
-		for p in parents:
-			if dir.startswith(p):
-				return True
-		return False
-
-	def changeDir(self, directory, select = None):
-		self.list = []
-
-		# if we are just entering from the list of mount points:
-		if self.current_directory is None:
-			if directory and self.showMountpoints:
-				self.current_mountpoint = self.getMountpointLink(directory)
-			else:
-				self.current_mountpoint = None
-		self.current_directory = directory
-		directories = []
-		files = []
-
-		if directory is None and self.showMountpoints: # present available mountpoints
-			for p in harddiskmanager.getMountedPartitions():
-				path = os_path.join(p.mountpoint, "")
-				if path not in self.inhibitMounts and not self.inParentDirs(path, self.inhibitDirs):
-					self.list.append(FileEntryComponent(name = p.description, absolute = path, isDir = True))
-			files = [ ]
-			directories = [ ]
-		elif directory is None:
-			files = [ ]
-			directories = [ ]
-		elif self.useServiceRef:
-			root = eServiceReference("2:0:1:0:0:0:0:0:0:0:" + directory)
-			if self.additional_extensions:
-				root.setName(self.additional_extensions)
-			serviceHandler = eServiceCenter.getInstance()
-			list = serviceHandler.list(root)
-
-			while 1:
-				s = list.getNext()
-				if not s.valid():
-					del list
-					break
-				if s.flags & s.mustDescent:
-					directories.append(s.getPath())
-				else:
-					files.append(s)
-			directories.sort()
-			files.sort()
-		else:
-			if fileExists(directory):
-				try:
-					files = listdir(directory)
-				except:
-					files = []
-				files.sort()
-				tmpfiles = files[:]
-				for x in tmpfiles:
-					if os_path.isdir(directory + x):
-						directories.append(directory + x + "/")
-						files.remove(x)
-
-		if directory is not None and self.showDirectories and not self.isTop:
-			if directory == self.current_mountpoint and self.showMountpoints:
-				self.list.append(FileEntryComponent(name = "<" +_("List of Storage Devices") + ">", absolute = None, isDir = True))
-			elif (directory != "/") and not (self.inhibitMounts and self.getMountpoint(directory) in self.inhibitMounts):
-				self.list.append(FileEntryComponent(name = "<" +_("Parent Directory") + ">", absolute = '/'.join(directory.split('/')[:-2]) + '/', isDir = True))
-
-		if self.showDirectories:
-			for x in directories:
-				if not (self.inhibitMounts and self.getMountpoint(x) in self.inhibitMounts) and not self.inParentDirs(x, self.inhibitDirs):
-					name = x.split('/')[-2]
-					self.list.append(FileEntryComponent(name = name, absolute = x, isDir = True))
-
-		if self.showFiles:
-			for x in files:
-				if self.useServiceRef:
-					path = x.getPath()
-					name = path.split('/')[-1]
-				else:
-					path = directory + x
-					name = x
-
-				if (self.matchingPattern is None) or re_compile(self.matchingPattern).search(path):
-					self.list.append(FileEntryComponent(name = name, absolute = x , isDir = False))
-
-		if self.showMountpoints and len(self.list) == 0:
-			self.list.append(FileEntryComponent(name = _("nothing connected"), absolute = None, isDir = False))
-
-		self.l.setList(self.list)
-
-		if select is not None:
-			i = 0
-			self.moveToIndex(0)
-			for x in self.list:
-				p = x[0][0]
-				
-				if isinstance(p, eServiceReference):
-					p = p.getPath()
-				
-				if p == select:
-					self.moveToIndex(i)
-				i += 1
-
-	def getCurrentDirectory(self):
-		return self.current_directory
-
-	def canDescent(self):
-		if self.getSelection() is None:
-			return False
-		return self.getSelection()[1]
-
-	def descent(self):
-		if self.getSelection() is None:
-			return
-		self.changeDir(self.getSelection()[0], select = self.current_directory)
-
-	def getFilename(self):
-		if self.getSelection() is None:
-			return None
-		x = self.getSelection()[0]
-		if isinstance(x, eServiceReference):
-			x = x.getPath()
-		return x
-
-	def getServiceRef(self):
-		if self.getSelection() is None:
-			return None
-		x = self.getSelection()[0]
-		if isinstance(x, eServiceReference):
-			return x
-		return None
-
-	def execBegin(self):
-		harddiskmanager.on_partition_list_change.append(self.partitionListChanged)
-
-	def execEnd(self):
-		harddiskmanager.on_partition_list_change.remove(self.partitionListChanged)
-
-	def refresh(self):
-		idx = self.l.getCurrentSelectionIndex()
-		self.changeDir(self.current_directory, self.getFilename())
-		self.moveToIndex(idx-1)
-
-	def partitionListChanged(self, action, device):
-		self.refreshMountpoints()
-		if self.current_directory is None:
-			self.refresh()
+def Plugins(**kwargs):
+	return [PluginDescriptor(name="Find MovieList Covers", description="Search Covers", where = PluginDescriptor.WHERE_MOVIELIST, fnc=main),
+			PluginDescriptor(name="Find MovieList Covers", description="Search Covers", where = PluginDescriptor.WHERE_PLUGINMENU, fnc=main2),
+			PluginDescriptor(where=[PluginDescriptor.WHERE_SESSIONSTART], fnc=autostart)
+			]
