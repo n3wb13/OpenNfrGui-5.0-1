@@ -374,6 +374,7 @@ class SelectionEventInfo:
 		self.list.connectSelChanged(self.__selectionChanged)
 		self.timer = eTimer()
 		self.timer.callback.append(self.updateEventInfo)
+		self["Cover"] = Pixmap()
 		self.onShown.append(self.__selectionChanged)
 
 	def __selectionChanged(self):
