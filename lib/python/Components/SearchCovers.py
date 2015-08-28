@@ -60,7 +60,7 @@ except:
 def getCoverPath():
 	blockList = ['hdd','cf','usb','sdcard']
 	dirList = os_listdir("/media")
-	coverPaths = ['/usr/share/enigma2/cover/', '/data/cover/', '/media/cf/cover/', '/media/usb/cover/', '/media/sdcard/cover/']
+	coverPaths = ['/usr/share/enigma2/cover/', '/data/cover/', '/media/cf/cover/', '/media/usb/cover/', '/media/sdcard/cover/', '/media/hdd/cover/']
 
 	if fileExists("/proc/mounts"):
 		mountsFile = open("/proc/mounts" ,"r")
@@ -90,7 +90,7 @@ config.plugins.fmlc.getdescription = ConfigYesNo(default = False)
 config.plugins.fmlc.bgtimer = ConfigYesNo(default = False)
 config.plugins.fmlc.bgtime = ConfigInteger(3, (1,24))
 config.plugins.fmlc.savestyle = ConfigSelection(default="movielist", choices = ["movielist", "opennfr"])
-config.plugins.fmlc.coverpath = ConfigSelection(default = "/usr/share/enigma2/cover/", choices = getCoverPath())
+config.plugins.fmlc.coverpath = ConfigSelection(default = "/media/hdd/cover/", choices = getCoverPath())
 config.plugins.fmlc.scanpath = ConfigText(default = "/media/hdd/movie/", fixed_size = False)
 
 fileExtensionsRemove = "(.avi|.mkv|.divx|.f4v|.flv|.img|.iso|.m2ts|.m4v|.mov|.mp4|.mpeg|.mpg|.mts|.vob|.wmv)"
@@ -503,7 +503,7 @@ class FindMovieListCoverSetup(Screen, ConfigListScreen):
 			self.list.append(getConfigListEntry("Save Cover(s) to Path:", config.plugins.fmlc.coverpath))
 			config.plugins.fmlc.getdescription.value = False
 		self.list.append(getConfigListEntry("Search in symlinks:", config.plugins.fmlc.followsymlink))
-		self.list.append(getConfigListEntry("Save Movie Description to Moviename.txt:", config.plugins.fmlc.getdescription))
+		#self.list.append(getConfigListEntry("Save Movie Description to Moviename.txt:", config.plugins.fmlc.getdescription))
 		self.list.append(getConfigListEntry("Scan for Cover(s) in Background:", config.plugins.fmlc.bgtimer))
 		if config.plugins.fmlc.bgtimer.value:
 			self.list.append(getConfigListEntry("Background Scan for new Cover(s) every (stunden):", config.plugins.fmlc.bgtime))
