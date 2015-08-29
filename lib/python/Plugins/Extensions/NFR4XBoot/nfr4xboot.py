@@ -229,6 +229,8 @@ def NFR4XBootRemoveUnpackDirs():
         shutil.rmtree('bre2ze')    
     if os.path.exists('/media/nfr4xboot/NFR4XBootUpload/odin2'):
         shutil.rmtree('odin2')
+    if os.path.exists('/media/nfr4xboot/NFR4XBootUpload/update'):
+        shutil.rmtree('update')
     if os.path.exists('/media/nfr4xboot/NFR4XBootUpload/redeagle'):
         shutil.rmtree('redeagle')
 
@@ -246,8 +248,6 @@ def NFR4XBootExtract(source, target, zipdelete):
                 rc = os.system('rm -rf ' + sourcefile)
         else:
                 os.system('echo "[NFR4XBoot] keep  %s for next time"'% sourcefile) 
-        if os.path.exists('/media/nfr4xboot/NFR4XBootUpload/update'):
-            os.chdir('update')
         if os.path.exists('/media/nfr4xboot/NFR4XBootUpload/unibox'):
             os.chdir('unibox')
             if os.path.exists('/media/nfr4xboot/NFR4XBootUpload/unibox/hde'):
@@ -329,6 +329,13 @@ def NFR4XBootExtract(source, target, zipdelete):
             os.chdir('odin2')        
             if os.path.exists('/media/nfr4xboot/NFR4XBootUpload/odin2/hybrid'):
 		os.chdir('hybrid')
+        if os.path.exists('/media/nfr4xboot/NFR4XBootUpload/update'):
+            os.chdir('update')
+            if os.path.exists('/media/nfr4xboot/NFR4XBootUpload/update/optimussos3plus'):
+		os.chdir('optimussos3plus')
+		if os.path.exists('/media/nfr4xboot/NFR4XBootUpload/update/optimussos3plus/cfe'):
+			os.chdir('cfe')
+			os.system('mv -f oe_rootfs.bin rootfs.bin')
         if os.path.exists('/media/nfr4xboot/NFR4XBootUpload/redeagle'):
             os.chdir('redeagle')        
             if os.path.exists('/media/nfr4xboot/NFR4XBootUpload/redeagle/twinboxlcd'):
