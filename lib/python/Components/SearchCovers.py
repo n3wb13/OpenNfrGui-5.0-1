@@ -83,15 +83,15 @@ def getCoverPath():
 pname = "Find MovieList Covers"
 pversion = "0.5 OpenNfr-mod"
 
-config.plugins.fmlc = ConfigSubsection()
-config.plugins.fmlc.themoviedb_coversize = ConfigSelection(default="w185", choices = ["w92", "w185", "w500", "original"])
-config.plugins.fmlc.followsymlink = ConfigYesNo(default = False)
-config.plugins.fmlc.getdescription = ConfigYesNo(default = False)
-config.plugins.fmlc.bgtimer = ConfigYesNo(default = False)
-config.plugins.fmlc.bgtime = ConfigInteger(3, (1,24))
-config.plugins.fmlc.savestyle = ConfigSelection(default="movielist", choices = ["movielist", "opennfr"])
-config.plugins.fmlc.coverpath = ConfigSelection(default = "/media/hdd/cover/", choices = getCoverPath())
-config.plugins.fmlc.scanpath = ConfigText(default = "/media/hdd/movie/", fixed_size = False)
+config.movielist.cover = ConfigSubsection()
+config.movielist.cover.themoviedb_coversize = ConfigSelection(default="w185", choices = ["w92", "w185", "w500", "original"])
+config.movielist.cover.followsymlink = ConfigYesNo(default = False)
+config.movielist.cover.getdescription = ConfigYesNo(default = False)
+config.movielist.cover.bgtimer = ConfigYesNo(default = False)
+config.movielist.cover.bgtime = ConfigInteger(3, (1,24))
+config.movielist.cover.savestyle = ConfigSelection(default="movielist", choices = ["movielist", "opennfr"])
+config.movielist.cover.coverpath = ConfigSelection(default = "/media/hdd/cover/", choices = getCoverPath())
+config.movielist.cover.scanpath = ConfigText(default = "/media/hdd/movie/", fixed_size = False)
 
 fileExtensionsRemove = "(.avi|.mkv|.divx|.f4v|.flv|.img|.iso|.m2ts|.m4v|.mov|.mp4|.mpeg|.mpg|.mts|.vob|.wmv)"
 
@@ -118,19 +118,19 @@ class BackgroundCoverScanner(Thread):
 		Thread.__init__(self)
 
 	def startTimer(self):
-		if config.plugins.fmlc.bgtimer.value:
+		if config.movielist.cover.bgtimer.value:
 			self.bgTimer = eTimer()
 			if isDreamOS:
 				self.bgTimer_conn = self.bgTimer.timeout.connect(self.getFileList)
 			else:
 				self.bgTimer.callback.append(self.getFileList)
-			self.bgTimer.start(3600000 * int(config.plugins.fmlc.bgtime.value))
+			self.bgTimer.start(3600000 * int(config.movielist.cover.bgtime.value))
 			self.bgTimerRunning = True
 			print "----------------------- S t a r t - T i m e r -------------------------"
 
 	def stopTimer(self):
 		if self.bgTimerRunning:
-			if not config.plugins.fmlc.bgtimer.value:
+			if not config.movielist.cover.bgtimer.value:
 				self.bgTimer.stop()
 				self.bgTimerRunning = False
 				print "----------------------- S t o p - T i m e r -------------------------"
@@ -148,16 +148,16 @@ class BackgroundCoverScanner(Thread):
 		self.background = background
 		if not self.scanning:
 			print "----------------------- Cover Background Scanner -------------------------"
-			print "Scan Path: %s" % config.plugins.fmlc.scanpath.value
+			print "Scan Path: %s" % config.movielist.cover.scanpath.value
 			self.scanning = True
-			if config.plugins.fmlc.savestyle.value == "opennfr":
-				if not pathExists(config.plugins.fmlc.coverpath.value):
-					shutil.os.mkdir(config.plugins.fmlc.coverpath.value)
+			if config.movielist.cover.savestyle.value == "opennfr":
+				if not pathExists(config.movielist.cover.coverpath.value):
+					shutil.os.mkdir(config.movielist.cover.coverpath.value)
 			if not self.background:
-				self.callback_infos("Scanning: '%s'" % str(config.plugins.fmlc.scanpath.value))
+				self.callback_infos("Scanning: '%s'" % str(config.movielist.cover.scanpath.value))
 			data = []
 			symlinks_dupe = []
-			for root, dirs, files in os.walk(config.plugins.fmlc.scanpath.value, topdown=False, onerror=None, followlinks=config.plugins.fmlc.followsymlink.value):
+			for root, dirs, files in os.walk(config.movielist.cover.scanpath.value, topdown=False, onerror=None, followlinks=config.movielist.cover.followsymlink.value):
 				if not root.endswith('/'):
 					root += "/"
 				slink = os.path.realpath(root)
@@ -168,10 +168,10 @@ class BackgroundCoverScanner(Thread):
 				for file in files:
 					filename_org = os.path.join(root, file)
 					if any([file.endswith(x) for x in self.fileExtensions]):
-						if config.plugins.fmlc.savestyle.value == "opennfr":
+						if config.movielist.cover.savestyle.value == "opennfr":
 							filename = self.getMovieSaveFile(file)
 							if not filename is None:
-								filename = "%s%s.jpg" % (config.plugins.fmlc.coverpath.value, filename)
+								filename = "%s%s.jpg" % (config.movielist.cover.coverpath.value, filename)
 							else:
 								continue
 						else:
@@ -205,8 +205,8 @@ class BackgroundCoverScanner(Thread):
 						#cleanTitle = re.sub('[.]ts', '', cleanTitle)
 						if fileExists(filename_org+".meta"):
 							metaName = open(filename_org+".meta",'r').readlines()[1].rstrip("\n").rstrip("\t").rstrip("\r")
-							if config.plugins.fmlc.savestyle.value == "opennfr":
-								filename = "%s%s.jpg" % (config.plugins.fmlc.coverpath.value, metaName.replace(" ","_").replace(".","_"))
+							if config.movielist.cover.savestyle.value == "opennfr":
+								filename = "%s%s.jpg" % (config.movielist.cover.coverpath.value, metaName.replace(" ","_").replace(".","_"))
 							else:
 								filename = re.sub("\.ts$", '.jpg', filename_org)
 							if not fileExists(filename):
@@ -285,7 +285,7 @@ class BackgroundCoverScanner(Thread):
 			list = re.findall('original_title":"(.*?)".*?"poster_path":"(.*?)"', data, re.S)
 			if list:
 				self.guilist.append(((title, True, filename),))
-				purl = "http://image.tmdb.org/t/p/%s%s" % (config.plugins.fmlc.themoviedb_coversize.value, list[0][1])
+				purl = "http://image.tmdb.org/t/p/%s%s" % (config.movielist.cover.themoviedb_coversize.value, list[0][1])
 				downloadPage(purl, filename).addCallback(self.countFound).addErrback(self.dataErrorDownload)
 			else:
 				self.guilist.append(((title, False, filename),))
@@ -294,7 +294,7 @@ class BackgroundCoverScanner(Thread):
 					self.callback_notfound(self.notfound)
 
 			# get description
-			if config.plugins.fmlc.getdescription.value:
+			if config.movielist.cover.getdescription.value:
 				idx = []
 				idx = re.findall('"id":(.*?),', data, re.S)
 				if idx:
@@ -315,7 +315,7 @@ class BackgroundCoverScanner(Thread):
 					self.callback_notfound(self.notfound)
 
 			# get description
-			if config.plugins.fmlc.getdescription.value:
+			if config.movielist.cover.getdescription.value:
 				if season and episode:
 					iurl = "http://www.thetvdb.com/api/2AAF0562E31BCEEC/series/%s/default/%s/%s/de.xml" % (list[0], str(int(season)), str(int(episode)))
 					getPage(iurl, headers={'Content-Type':'application/x-www-form-urlencoded'}).addCallback(self.getInfos, id, type, filename).addErrback(self.dataError)
@@ -406,10 +406,10 @@ class fmlcMenuList(GUIComponent, object):
 		res = [ None ]
 
 		if coverFound:
-			truePath = "skin_default/images/cover_yes.png"
+			truePath = "/usr/share/enigma2/skin_default/extensions/cover_yes.png"
 			res.append((eListboxPythonMultiContent.TYPE_PIXMAP_ALPHATEST, 10, 1, 25, 25, loadPNG(truePath)))
 		else:
-			falsePath = "skin_default/images/cover_no.png"
+			falsePath = "/usr/share/enigma2/skin_default/extensions/cover_no.png"
 			res.append((eListboxPythonMultiContent.TYPE_PIXMAP_ALPHATEST, 10, 1, 25, 25, loadPNG(falsePath)))
 
 		res.append((eListboxPythonMultiContent.TYPE_TEXT, 50, 0, 1280, 30, 0, RT_HALIGN_LEFT | RT_VALIGN_CENTER, str(name)))
@@ -497,16 +497,16 @@ class FindMovieListCoverSetup(Screen, ConfigListScreen):
 	def createConfigList(self):
 		self.setTitle(pname)
 		self.list = []
-		self.list.append(getConfigListEntry("Cover resolution for themoviedb.org:", config.plugins.fmlc.themoviedb_coversize))
-		self.list.append(getConfigListEntry("Save Cover(s) for (MovieList):", config.plugins.fmlc.savestyle))
-		if config.plugins.fmlc.savestyle.value == "opennfr":
-			self.list.append(getConfigListEntry("Save Cover(s) to Path:", config.plugins.fmlc.coverpath))
-			config.plugins.fmlc.getdescription.value = False
-		self.list.append(getConfigListEntry("Search in symlinks:", config.plugins.fmlc.followsymlink))
-		#self.list.append(getConfigListEntry("Save Movie Description to Moviename.txt:", config.plugins.fmlc.getdescription))
-		self.list.append(getConfigListEntry("Scan for Cover(s) in Background:", config.plugins.fmlc.bgtimer))
-		if config.plugins.fmlc.bgtimer.value:
-			self.list.append(getConfigListEntry("Background Scan for new Cover(s) every (stunden):", config.plugins.fmlc.bgtime))
+		self.list.append(getConfigListEntry("Cover resolution for themoviedb.org:", config.movielist.cover.themoviedb_coversize))
+		self.list.append(getConfigListEntry("Save Cover(s) for (MovieList):", config.movielist.cover.savestyle))
+		if config.movielist.cover.savestyle.value == "opennfr":
+			self.list.append(getConfigListEntry("Save Cover(s) to Path:", config.movielist.cover.coverpath))
+			config.movielist.cover.getdescription.value = False
+		self.list.append(getConfigListEntry("Search in symlinks:", config.movielist.cover.followsymlink))
+		#self.list.append(getConfigListEntry("Save Movie Description to Moviename.txt:", config.movielist.cover.getdescription))
+		self.list.append(getConfigListEntry("Scan for Cover(s) in Background:", config.movielist.cover.bgtimer))
+		if config.movielist.cover.bgtimer.value:
+			self.list.append(getConfigListEntry("Background Scan for new Cover(s) every (stunden):", config.movielist.cover.bgtime))
 
 	def changedEntry(self):
 		self.createConfigList()
@@ -521,14 +521,14 @@ class FindMovieListCoverSetup(Screen, ConfigListScreen):
 		self.changedEntry()
 
 	def save(self):
-		config.plugins.fmlc.themoviedb_coversize.save()
-		config.plugins.fmlc.followsymlink.save()
-		config.plugins.fmlc.getdescription.save()
-		config.plugins.fmlc.savestyle.save()
-		config.plugins.fmlc.bgtimer.save()
-		config.plugins.fmlc.bgtime.save()
-		config.plugins.fmlc.coverpath.save()
-		if config.plugins.fmlc.bgtimer.value:
+		config.movielist.cover.themoviedb_coversize.save()
+		config.movielist.cover.followsymlink.save()
+		config.movielist.cover.getdescription.save()
+		config.movielist.cover.savestyle.save()
+		config.movielist.cover.bgtimer.save()
+		config.movielist.cover.bgtime.save()
+		config.movielist.cover.coverpath.save()
+		if config.movielist.cover.bgtimer.value:
 			self.fileScanner.startTimer()
 		else:
 			self.fileScanner.stopTimer()
@@ -580,7 +580,7 @@ class FindMovieList(Screen):
 		#self['title'] 
 		self.title = "%s v%s" % (pname, pversion)
 		self['info'] = Label("")
-		self['path'] = Label("Scan Path: %s" % config.plugins.fmlc.scanpath.value)
+		self['path'] = Label("Scan Path: %s" % config.movielist.cover.scanpath.value)
 		self['found'] = Label("Download:")
 		self['notfound'] = Label("Not Found:")
 		self['error'] = Label("Download Error:")
@@ -640,7 +640,7 @@ class FindMovieList(Screen):
 	def showCover(self, poster_path):
 		self.picload = ePicLoad()
 		if not fileExists(poster_path):
-			poster_path = "skin_default/images/no_cover.png"
+			poster_path = "/usr/share/enigma2/skin_default/extensions/no_cover.png"
 		if fileExists(poster_path):
 			self["cover"].instance.setPixmap(gPixmapPtr())
 			scale = AVSwitch().getFramebufferScale()
@@ -667,14 +667,14 @@ class FindMovieList(Screen):
 		pass
 		
 	def setScanPath(self):
-		self.session.openWithCallback(self.selectedMediaFile, FindMovieListScanPath, config.plugins.fmlc.scanpath.value)
+		self.session.openWithCallback(self.selectedMediaFile, FindMovieListScanPath, config.movielist.cover.scanpath.value)
 
 	def selectedMediaFile(self, res):
 		if res is not None:
-			config.plugins.fmlc.scanpath.value = res
-			config.plugins.fmlc.scanpath.save()
+			config.movielist.cover.scanpath.value = res
+			config.movielist.cover.scanpath.save()
 			configfile.save()
-			self['path'].setText("Scan Path: %s" % config.plugins.fmlc.scanpath.value)
+			self['path'].setText("Scan Path: %s" % config.movielist.cover.scanpath.value)
 	
 	def keyLeft(self):
 		check = self['list'].getCurrent()
