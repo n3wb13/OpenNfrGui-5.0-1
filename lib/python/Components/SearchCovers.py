@@ -458,85 +458,6 @@ class fmlcMenuList(GUIComponent, object):
 		if self.instance is not None:
 			self.instance.moveSelection(self.instance.moveDown)
 
-class FindMovieListCoverSetup(Screen, ConfigListScreen):
-	skin = """
-		<screen position="40,80" size="1200,600" title=" " >
-			<widget name="info" position="10,10" size="1180,30" font="Regular;24" foregroundColor="#00fff000"/>
-			<widget name="config" position="10,60" size="1180,480" transparent="1" scrollbarMode="showOnDemand" />
-			<widget name="key_red" position="40,570" size="250,25" halign="center" transparent="1" font="Regular;20"/>
-			<widget name="key_green" position="330,570" size="250,22" halign="center" transparent="1" font="Regular;20"/>
-			<widget name="key_yellow" position="620,570" size="250,22" halign="center" transparent="1" font="Regular;20"/>
-			<widget name="key_blue" position="890,570" size="250,22" halign="center" transparent="1" font="Regular;20"/>
-			<eLabel position="40,596" size="250,4" zPosition="-10" backgroundColor="#20f23d21" />
-			<eLabel position="330,596" size="250,4" zPosition="-10" backgroundColor="#20389416" />
-			<eLabel position="620,596" size="250,4" zPosition="-10" backgroundColor="#20e6dd2b" />
-			<eLabel position="890,596" size="250,4" zPosition="-10" backgroundColor="#200064c7" />
-		</screen>"""
-
-	def __init__(self, session):
-		Screen.__init__(self, session)
-		self.session = session
-
-		self["actions"]  = ActionMap(["OkCancelActions", "ShortcutActions", "WizardActions", "ColorActions", "SetupActions", "NumberActions", "MenuActions", "EPGSelectActions"], {
-			"cancel": self.cancel,
-			"red": self.cancel,
-			"green"	: self.save
-		}, -1)
-
-		self['info'] = Label("Settings:")
-		self['key_red'] = Label("Cancel")
-		self['key_green'] = Label("Ok")
-		self['key_yellow'] = Label("")
-		self['key_blue'] = Label("")
-
-		self.list = []
-		self.createConfigList()
-		ConfigListScreen.__init__(self, self.list)
-		self.fileScanner = BackgroundCoverScanner.instance
-
-	def createConfigList(self):
-		self.setTitle(pname)
-		self.list = []
-		self.list.append(getConfigListEntry("Cover resolution for themoviedb.org:", config.movielist.cover.themoviedb_coversize))
-		self.list.append(getConfigListEntry("Save Cover(s) for (MovieList):", config.movielist.cover.savestyle))
-		if config.movielist.cover.savestyle.value == "opennfr":
-			self.list.append(getConfigListEntry("Save Cover(s) to Path:", config.movielist.cover.coverpath))
-			config.movielist.cover.getdescription.value = False
-		self.list.append(getConfigListEntry("Search in symlinks:", config.movielist.cover.followsymlink))
-		#self.list.append(getConfigListEntry("Save Movie Description to Moviename.txt:", config.movielist.cover.getdescription))
-		self.list.append(getConfigListEntry("Scan for Cover(s) in Background:", config.movielist.cover.bgtimer))
-		if config.movielist.cover.bgtimer.value:
-			self.list.append(getConfigListEntry("Background Scan for new Cover(s) every (stunden):", config.movielist.cover.bgtime))
-
-	def changedEntry(self):
-		self.createConfigList()
-		self["config"].setList(self.list)
-
-	def keyLeft(self):
-		ConfigListScreen.keyLeft(self)
-		self.changedEntry()
-
-	def keyRight(self):
-		ConfigListScreen.keyRight(self)
-		self.changedEntry()
-
-	def save(self):
-		config.movielist.cover.themoviedb_coversize.save()
-		config.movielist.cover.followsymlink.save()
-		config.movielist.cover.getdescription.save()
-		config.movielist.cover.savestyle.save()
-		config.movielist.cover.bgtimer.save()
-		config.movielist.cover.bgtime.save()
-		config.movielist.cover.coverpath.save()
-		if config.movielist.cover.bgtimer.value:
-			self.fileScanner.startTimer()
-		else:
-			self.fileScanner.stopTimer()
-		configfile.save()
-		self.close()
-
-	def cancel(self):
-		self.close()
 
 class FindMovieList(Screen):
 	skin = """
@@ -550,11 +471,9 @@ class FindMovieList(Screen):
 			<widget name="cover" position="850,110" size="300,420" alphatest="blend"/>
 			<widget name="key_red" position="40,570" size="250,25" halign="center" transparent="1" font="Regular;20"/>
 			<widget name="key_green" position="330,570" size="250,22" halign="center" transparent="1" font="Regular;20"/>
-			<widget name="key_yellow" position="620,570" size="250,22" halign="center" transparent="1" font="Regular;20"/>
 			<widget name="key_blue" position="890,570" size="250,22" halign="center" transparent="1" font="Regular;20"/>
 			<eLabel position="40,596" size="250,4" zPosition="-10" backgroundColor="#20f23d21" />
-			<eLabel position="330,596" size="250,4" zPosition="-10" backgroundColor="#20389416" />
-			<eLabel position="620,596" size="250,4" zPosition="-10" backgroundColor="#20e6dd2b" />
+			<eLabel position="330,596" size="250,4" zPosition="-10" backgroundColor="#20389416" />			
 			<eLabel position="890,596" size="250,4" zPosition="-10" backgroundColor="#200064c7" />
 		</screen>"""
 
@@ -568,7 +487,6 @@ class FindMovieList(Screen):
 		self["actions"]  = ActionMap(["OkCancelActions", "ShortcutActions", "WizardActions", "ColorActions", "SetupActions", "NumberActions", "MenuActions", "EPGSelectActions"], {
 			"cancel":	self.cancel,
 			"green" :	self.getFileList,
-			"yellow":	self.setup,
 			"blue"	:	self.setScanPath,
 			"left"  :	self.keyLeft,
 			"right" :	self.keyRight,
@@ -587,7 +505,7 @@ class FindMovieList(Screen):
 		self['cover'] = Pixmap()
 		self['key_red'] = Label("Exit")
 		self['key_green'] = Label("Search Cover(s)")
-		self['key_yellow'] = Label("Setup")
+		self['key_yellow'] = Label("")
 		self['key_blue'] = Label("Set Scan Path")
 		self['list'] = fmlcMenuList()
 		
@@ -659,9 +577,6 @@ class FindMovieList(Screen):
 						self["cover"].instance.setPixmap(ptr)
 						self["cover"].show()
 			del self.picload
-
-	def setup(self):
-		self.session.open(FindMovieListCoverSetup)
 
 	def keyOk(self):
 		pass
