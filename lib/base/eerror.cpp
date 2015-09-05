@@ -93,12 +93,16 @@ static char *alertToken[] = {
 	"no module",
 	"no such file",
 	"cannot",
+	"invalid",
+	"bad parameter",
+	"not found",
 	NULL		//end of list
 };
 
 static char *warningToken[] = {
 // !!! all strings must be written in lower case !!!
 	"warning",
+	"unknown",
 	NULL		//end of list
 };
 
